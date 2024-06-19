@@ -1,0 +1,126 @@
+Grid: 
+  Grid of cells 
+  width/height/infinite?
+Cell: 
+  Position on the grid (x,y)
+  Either empty, or contains exactly one character (e.g. "虫")
+  Defaults to empty
+  May possess metadata:
+    History, notes, link, styles
+Viewport:
+  Subset of the grid displayed to the user (x,y,w,h)
+  (x,y) default to (0,0)
+  (w,h) default to the maximum available space on the user's screen
+Viewport position:
+  Position relative to viewport
+Cursor: 
+  Position on the grid (x,y)
+  Defaults to top-left (0,0)
+Cursor position:
+  Position of the cursor 
+  Must be in viewport
+Cursor cell:
+  Cell at the cursor position (under the cursor)
+Selection: 
+  One or more cells
+  Must include the cursor cell 
+  Defaults to the cursor cell 
+  Cannot contain duplicates
+
+Moving cursor:
+  New cursor position is outside viewport:
+    Move viewport such that cursor position is in viewport 
+
+Expand selection: 
+  Selection is multiple cells: 
+    Expand selection on each cell independently and combine the results, removing duplicates
+
+Move selection: 
+  Move the selection cells by one cell
+  Destination cells are displaced:
+    Non-empty destination cells are not overwritten by the selection cells
+    They are moved to the empty cells left behind after the move
+  Selection is multiple cells: 
+    Move each cell of selection independently:
+      In an order determined by their position and the movement direction
+
+Arrow UP/DOWN/LEFT/RIGHT:
+  Move cursor by one cell 
+  CTRL: move cursor up to next empty cell  
+  SHIFT: expand selection up to new cursor position
+  ALT: move selection by one cell 
+
+Home (, End):
+  Move cursor to first (, last) column of viewport, then document
+  CTRL: move cursor vertically instead of horizontally
+
+PageUp (, PageDown):
+  Move the viewport up (, down) by 100% of the viewport height
+  Keep cursor in same viewport position 
+  Set selection to cursor 
+
+Click cell:
+  Set cursor to cell 
+  Set selection to cell
+  SHIFT or CTRL: add cell to selection
+
+Click cell and drag:
+  Set cursor to cell
+  Set selection to every cell overlapping click-drag rectangle
+  SHIFT or CTRL: add to selection every cell overlapping click-drag rectangle 
+  ALT: move clicked cell to drag destination
+    Selection is multiple cells and clicked cell is selected:
+      Move selection cells by relative amount, based on click-drag rectangle
+    Destination cells swap positions with the moved cells 
+
+Escape:
+  Selection is multiple cells: set selection to cursor cell
+
+Erase:
+  Make cell empty
+
+Backspace (, Delete):
+  Erase selection cells, set selection to cursor
+  Selection is single empty cell: move cursor left (, right)
+  CTRL: erase up to next empty cell
+  SHIFT: erase vertically instead of horizontally
+
+Enter(, Tab):
+  Insert empty cell after? cursor, pushing existing cells down (, right)
+  SHIFT: remove cell before cursor, pulling existing cells up (, left)
+
+Space:
+  Placeholder action performed with selection cells' contents as argument
+  For example, lookup in dictionary
+
+Copy (CTRL+C):
+  Copy selection cells to clipboard
+Cut (CTRL+X):
+  Copy, then erase
+
+Paste (CTRL+V):
+  Paste clipboard contents at selection 
+    Spaces are interpreted as empty cells
+    Newlines are interpreted as cells on a lower row, with the same starting column
+  Expand or shrink selection to fit pasted contents 
+
+Start typing:
+  Begin insert mode
+
+Insert mode:
+  Idk really
+  Overwrite selection cells' contents with user input
+  
+
+
+Dashed outline 
+  Initially hidden
+  When holding alt and hovering the grid:
+    * Only after some movement has occurred 
+    Set "cursor: pointer"
+    Hovering selection: outline selection 
+    Hovering cell outside selection: outline cell 
+    Releasing alt hides the outline and cancels any movement action
+    Clicking and dragging:
+      Outline moves relative to drag
+
