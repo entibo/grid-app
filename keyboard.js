@@ -17,7 +17,10 @@ export function Keyboard({
       cell.textContent = e.data[i]
       cell.style.display = 'flex'
     }
-    dom.inputRange.style.width = e.data.length * cellSize + 1
+    dom.inputRange.style.left = `${cursor.dx * cellSize}px`
+    dom.inputRange.style.top = `${cursor.dy * cellSize}px`
+    dom.inputRange.style.width = `${e.data.length * cellSize + 1}px`
+    // dom.inputRange.style.height = `${e.data.length * cellSize + 1}px`
   }
   dom.textarea.addEventListener('compositionstart', (e) => {
     console.log('compositionstart')
@@ -34,10 +37,12 @@ export function Keyboard({
       cell.style.display = 'none'
     }
     dom.inputRange.classList.remove('composing')
-    dom.inputRange.style.width = ''
+    dom.inputRange.style = ''
     if (e.data.length === 0) return
     checkpoint()
-    const range = writeText(grid, cursor, dom.textarea.value)
+    deleteRange(grid, cursor)
+    const range = writeText(grid, cursor, e.data)
+    console.log('wrote composition', cursor, range, e.data)
     cursor.set(nextPosition({ x: range.x + range.dx, y: range.y + range.dy }))
   })
 
@@ -45,17 +50,18 @@ export function Keyboard({
     console.log(e.inputType, e.data)
     if (e.isComposing) return
     if (e.inputType === 'deleteContentBackward') return
+    if (e.inputType === 'insertCompositionText') return
     if (e.inputType === 'insertFromPaste') {
       checkpoint()
       deleteRange(grid, cursor)
-      const range = writeText(grid, cursor, dom.textarea.value)
+      const range = writeText(grid, cursor, e.data)
       cursor.set(range)
       return
     }
-    if (dom.textarea.value.length === 0) return
+    if (e.data.length === 0) return
     checkpoint()
     deleteRange(grid, cursor)
-    const range = writeText(grid, cursor, dom.textarea.value)
+    const range = writeText(grid, cursor, e.data)
     if (!range) return
     cursor.set(nextPosition({ x: range.x + range.dx, y: range.y + range.dy }))
   })
@@ -131,20 +137,11 @@ export function Keyboard({
     }[e.key]
     if (arrowMotion) {
       if (e.shiftKey) {
-        const newCursor = {
+        cursor.set({
           ...cursor,
           dx: cursor.dx + arrowMotion.dx,
           dy: cursor.dy + arrowMotion.dy,
-        }
-        if (newCursor.dx < 0) {
-          newCursor.x--
-          newCursor.dx = 0
-        }
-        if (newCursor.dy < 0) {
-          newCursor.y--
-          newCursor.dy = 0
-        }
-        cursor.set(newCursor)
+        })
         return
       }
 
@@ -163,9 +160,16 @@ export function Keyboard({
       }
 
       // Only move cursor
+
       cursor.set({
-        x: cursor.x + arrowMotion.dx, // + (arrowMotion.dx > 0 ? cursor.dx : 0),
-        y: cursor.y + arrowMotion.dy, // + (arrowMotion.dy > 0 ? cursor.dy : 0),
+        x:
+          cursor.x +
+          arrowMotion.dx +
+          (Math.sign(cursor.dx) === Math.sign(arrowMotion.dx) ? cursor.dx : 0),
+        y:
+          cursor.y +
+          arrowMotion.dy +
+          (Math.sign(cursor.dy) === Math.sign(arrowMotion.dy) ? cursor.dy : 0),
         dx: 0,
         dy: 0,
       })

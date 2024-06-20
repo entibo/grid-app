@@ -31,10 +31,7 @@
     align-items: center;
     padding: 0 var(--cell-size) / 4;
     overflow: hidden;
-  }
-
-  .cell.selected {
-    background-color: lightblue;
+    text-transform: full-width;
   }
 
   .cursor {
@@ -49,6 +46,7 @@
       padding-top: calc(1px + var(--cell-size));
       pointer-events: none;
     }
+
     .dashedRange {
       pointer-events: none;
       position: absolute;
@@ -66,7 +64,8 @@
       width: calc(var(--cell-size) - 1px);
       height: calc(var(--cell-size) - 1px);
       pointer-events: none;
-      outline: 1px solid rgba(0, 0, 0, 0.7);
+      /* outline: 1px solid rgba(0, 0, 0, 0.7); */
+      border-left: 2px solid salmon;
       display: flex;
       &.composing {
         animation: pulsate 1s infinite;

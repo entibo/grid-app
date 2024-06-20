@@ -29,19 +29,14 @@ export function Mouse({
   addEventListener('blur', stop)
   addEventListener('pointerup', stop)
   containerElement.addEventListener('pointerleave', stop)
+
   listenToKeyStateChange('Alt', (down) => {
-    if (down && currentPosition) {
-      altOverCell()
+    if (down && startPosition && currentPosition) {
+      startPosition = currentPosition
+      mode = 'move'
+      setDashedRange({ dx: 0, dy: 0 })
     }
   })
-
-  function altOverCell() {
-    if (startPosition) {
-      startPosition = currentPosition
-    } else {
-      cursor.set(currentPosition)
-    }
-  }
 
   function start(e) {
     if (e.button !== 0) return
@@ -66,8 +61,8 @@ export function Mouse({
       const { dx, dy } = getPositionDelta(startPosition, currentPosition)
       if (mode === 'select') {
         const range = { ...startPosition, dx, dy }
-        if (dx < 0) range.x += dx
-        if (dy < 0) range.y += dy
+        // if (dx < 0) range.x += dx
+        // if (dy < 0) range.y += dy
         cursor.set(range)
       } else if (mode === 'move') {
         setDashedRange({ dx, dy })
@@ -76,6 +71,8 @@ export function Mouse({
   }
 
   function stop() {
+    if (!startPosition) return
+    if (!currentPosition) return
     console.log('stop')
     const { dx, dy } = getPositionDelta(startPosition, currentPosition)
     if (mode === 'move') {
@@ -83,9 +80,9 @@ export function Mouse({
       const content = readRange(grid, cursor)
       deleteRange(grid, cursor)
       cursor.set({
-        ...cursor,
-        x: cursor.x + dx,
-        y: cursor.y + dy,
+        ...cursor.positive,
+        x: cursor.positive.x + dx,
+        y: cursor.positive.y + dy,
       })
       writeText(grid, cursor, content)
     }

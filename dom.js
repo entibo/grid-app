@@ -49,6 +49,7 @@ export function Dom({ root }) {
 
   const dashedRange = document.createElement('div')
   dashedRange.className = 'range dashedRange'
+  dashedRange.style.display = 'none'
   cursor.appendChild(dashedRange)
 
   const inputRange = document.createElement('div')
@@ -79,7 +80,7 @@ export function Dom({ root }) {
   }
 
   function writeCell({ x, y }, value) {
-    console.log('write', x, y, value)
+    console.log('dom  write', x, y, value)
     for (let newY = rows.children.length; newY <= y; newY++) {
       rows.appendChild(createRow(newY, getNumColumns()))
     }
