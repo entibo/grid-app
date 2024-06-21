@@ -1,5 +1,4 @@
 :root {
-  --cell-size: 20px;
   background: #fafafa;
 }
 
@@ -7,82 +6,96 @@
   box-sizing: border-box;
 }
 
+body {
+}
 .grid {
   position: relative;
   user-select: none;
-  &.alt {
-    cursor: pointer;
-  }
+  overflow: auto;
+  height: 56vh;
+  width: 54vw;
+}
 
-  .row {
-    display: flex;
-  }
+.grid.alt {
+  cursor: pointer;
+}
 
-  .cell {
-    width: var(--cell-size);
-    height: var(--cell-size);
-    background: #fafafa;
-    border: 1px solid lightgrey;
-    border-right: none;
-    border-bottom: none;
-    flex-shrink: 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 0 var(--cell-size) / 4;
-    overflow: hidden;
-    text-transform: full-width;
-  }
+.grid .rows {
+  width: fit-content;
+  height: fit-content;
+  --grid-color: lightgrey;
+  background: linear-gradient(var(--grid-color) 1px, transparent 1px)
+      calc(var(--cell-size) / -2) 0 / var(--cell-size) var(--cell-size) repeat,
+    linear-gradient(90deg, var(--grid-color) 1px, transparent 1px) 0 /
+      var(--cell-size) var(--cell-size) repeat;
+}
 
-  .cursor {
-    position: absolute;
+.grid .row {
+  display: flex;
+}
 
-    .selectionRange {
-      background: rgba(100, 100, 255, 0.1);
-      position: absolute;
-      top: 0;
-      left: 0;
-      padding-left: calc(1px + var(--cell-size));
-      padding-top: calc(1px + var(--cell-size));
-      pointer-events: none;
-    }
+.grid .cell {
+  width: var(--cell-size);
+  height: var(--cell-size);
+  /* background: #fafafa; */
+  /* border: 1px solid lightgrey; */
+  border-right: none;
+  border-bottom: none;
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0 var(--cell-size) / 4;
+  overflow: hidden;
+  text-transform: full-width;
+}
 
-    .dashedRange {
-      pointer-events: none;
-      position: absolute;
-      top: 0;
-      left: 0;
-      padding-left: calc(1px + var(--cell-size));
-      padding-top: calc(1px + var(--cell-size));
-      outline: 2px dashed blueviolet;
-    }
+.grid .cursor .selectionRange {
+  background: rgba(100, 100, 255, 0.1);
+  position: absolute;
+  top: 0;
+  left: 0;
+  padding-left: calc(1px + var(--cell-size));
+  padding-top: calc(1px + var(--cell-size));
+  pointer-events: none;
+}
 
-    .inputRange {
-      position: absolute;
-      top: 1px;
-      left: 1px;
-      width: calc(var(--cell-size) - 1px);
-      height: calc(var(--cell-size) - 1px);
-      pointer-events: none;
-      /* outline: 1px solid rgba(0, 0, 0, 0.7); */
-      border-left: 2px solid salmon;
-      display: flex;
-      &.composing {
-        animation: pulsate 1s infinite;
-      }
-    }
-  }
-  .textarea {
-    position: fixed;
-    top: 0;
-    left: 0;
-    appearance: none;
-    border: none;
-    outline: none;
-    background: none;
-    opacity: 0;
-    pointer-events: none;
-  }
+.grid .cursor .dashedRange {
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  padding-left: calc(1px + var(--cell-size));
+  padding-top: calc(1px + var(--cell-size));
+  outline: 2px dashed blueviolet;
+}
+
+.grid .cursor .inputRange {
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  width: calc(var(--cell-size) - 1px);
+  height: calc(var(--cell-size) - 1px);
+  pointer-events: none;
+  /* outline: 1px solid rgba(0, 0, 0, 0.7); */
+  border-left: 2px solid salmon;
+  display: flex;
+}
+
+.grid .cursor .inputRange.composing {
+  animation: pulsate 1s infinite;
+}
+
+.grid .textarea {
+  position: fixed;
+  top: 0;
+  left: 0;
+  appearance: none;
+  border: none;
+  outline: none;
+  background: none;
+  opacity: 0;
+  pointer-events: none;
 }
 
 @keyframes pulsate {

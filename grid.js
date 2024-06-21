@@ -1,8 +1,16 @@
-export function nextPosition({ x, y }, dir = 'horizontal') {
+export function nextCharacter({ x, y }, dir = 'horizontal') {
   if (dir === 'horizontal') {
     return { x: x + 1, y }
   } else {
     return { x, y: y + 1 }
+  }
+}
+
+export function nextLine({ x, y }, dir = 'horizontal') {
+  if (dir === 'horizontal') {
+    return { x, y: y + 1 }
+  } else {
+    return { x: x - 1, y }
   }
 }
 

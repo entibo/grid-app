@@ -1,7 +1,7 @@
 import * as History from './history.js'
 import * as Grid from './grid.js'
-import { Dom } from './dom.js'
-import { Keyboard } from './grid.js'
+import { Dom } from './dom2.js'
+import { Keyboard } from './keyboard.js'
 import { Mouse } from './mouse.js'
 import { cellSize } from './global.js'
 import { debounce } from './util.js'
@@ -123,7 +123,139 @@ const mouse = Mouse({
   },
 })
 
-const keyboard = Keyboard({ cursor, grid, dom, history })
+function hideInputRange() {
+  dom.inputRange.classList.remove('composing')
+  for (const cell of dom.inputRange.children) {
+    cell.style.display = 'none'
+  }
+  dom.inputRange.style.width = ''
+}
+
+function showInputRange() {
+  dom.inputRange.classList.add('composing')
+}
+
+function updateInputRange(compositionText) {
+  for (const cell of dom.inputRange.children) {
+    cell.style.display = 'none'
+  }
+  for (let i = 0; i < compositionText.length; i++) {
+    const cell = dom.inputRange.children[i]
+    cell.textContent = compositionText[i]
+    cell.style.display = 'flex'
+  }
+  dom.inputRange.style.left = `${cursor.dx * cellSize}px`
+  dom.inputRange.style.top = `${cursor.dy * cellSize}px`
+  dom.inputRange.style.width = `${compositionText.length * cellSize + 1}px`
+  // dom.inputRange.style.height = `${text.length * cellSize + 1}px`
+}
+
+const keyboard = Keyboard({
+  element: dom.textarea,
+
+  undo: history.undo,
+  redo: history.redo,
+
+  compositionStateChange(compositionState, compositionText) {
+    if (compositionState === 'end') {
+      hideInputRange()
+    } else if (compositionState === 'start') {
+      showInputRange()
+    }
+    updateInputRange(compositionText)
+  },
+
+  insertText(text, type) {
+    console.log('insertText', text, type)
+    history.checkpoint()
+    Grid.deleteRange(grid, cursor)
+    const range = Grid.writeText(grid, cursor, text)
+    if (range) cursor.set(range)
+  },
+
+  copy() {
+    console.log('copy')
+  },
+  cut() {
+    console.log('cut')
+    history.checkpoint()
+    Grid.deleteRange(grid, cursor)
+  },
+
+  selectColumn() {
+    console.log('selectColumn')
+    cursor.set({
+      x: cursor.x,
+      y: 0,
+      dx: cursor.dx,
+      dy: 10,
+    })
+  },
+  selectRow() {
+    console.log('selectRow')
+    cursor.set({
+      x: 0,
+      y: cursor.y,
+      dx: 10,
+      dy: cursor.dy,
+    })
+  },
+  selectAll() {
+    console.log('selectAll')
+    cursor.set({
+      x: 0,
+      y: 0,
+      dx: 10,
+      dy: 10,
+    })
+  },
+  clearSelection() {
+    cursor.set({ x: cursor.x, y: cursor.y, dx: 0, dy: 0 })
+  },
+
+  move({ dx, dy }, mode) {
+    console.log('move', [dx, dy].join(', '), mode)
+    let x = cursor.x + dx
+    let y = cursor.y + dy
+
+    if (mode === 'select') {
+      cursor.set({
+        x,
+        y,
+        dx: cursor.dx - dx,
+        dy: cursor.dy - dy,
+      })
+    }
+
+    if (mode === 'displace') {
+      history.checkpoint()
+      Grid.moveRange(grid, cursor, { dx, dy })
+      cursor.set({ ...cursor, x, y })
+    }
+
+    if (mode === 'normal') {
+      // Jump to the other side of the selection range
+      if (Math.sign(dx) === Math.sign(cursor.dx)) {
+        x += cursor.dx
+      }
+      if (Math.sign(dy) === Math.sign(cursor.dy)) {
+        y += cursor.dy
+      }
+      cursor.set({ ...cursor, x, y })
+    }
+  },
+
+  erase(isBack, isWord) {
+    console.log('erase', isBack, isWord)
+    history.checkpoint()
+    if (isWord) {
+      // TODO
+    } else {
+      Grid.deleteRange(grid, cursor)
+    }
+    // move cursor to the left or right?
+  },
+})
 
 /// init
 
