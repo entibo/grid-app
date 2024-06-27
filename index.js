@@ -1,7 +1,7 @@
 import * as History from './history.js'
-import * as Grid from './grid.js'
-import { Dom } from './dom2.js'
-import { Keyboard } from './keyboard.js'
+import * as Grid from './old/grid.js'
+import { Dom } from './old/dom.js'
+import { init } from './keyboard.js'
 import { Mouse } from './mouse.js'
 import { cellSize } from './global.js'
 import { debounce } from './util.js'
@@ -123,34 +123,8 @@ const mouse = Mouse({
   },
 })
 
-function hideInputRange() {
-  dom.inputRange.classList.remove('composing')
-  for (const cell of dom.inputRange.children) {
-    cell.style.display = 'none'
-  }
-  dom.inputRange.style.width = ''
-}
 
-function showInputRange() {
-  dom.inputRange.classList.add('composing')
-}
-
-function updateInputRange(compositionText) {
-  for (const cell of dom.inputRange.children) {
-    cell.style.display = 'none'
-  }
-  for (let i = 0; i < compositionText.length; i++) {
-    const cell = dom.inputRange.children[i]
-    cell.textContent = compositionText[i]
-    cell.style.display = 'flex'
-  }
-  dom.inputRange.style.left = `${cursor.dx * cellSize}px`
-  dom.inputRange.style.top = `${cursor.dy * cellSize}px`
-  dom.inputRange.style.width = `${compositionText.length * cellSize + 1}px`
-  // dom.inputRange.style.height = `${text.length * cellSize + 1}px`
-}
-
-const keyboard = Keyboard({
+const keyboard = init({
   element: dom.textarea,
 
   undo: history.undo,

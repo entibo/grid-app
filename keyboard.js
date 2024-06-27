@@ -1,4 +1,14 @@
 import { isKeyDown, keyDownTime } from './keyboard-global.js'
+import {
+  clearSelection,
+  compositionStateChange,
+  insertText,
+  redo,
+  selectAll,
+  selectColumn,
+  selectRow,
+  undo,
+} from './controller.js'
 
 function doesCompleteCombo(key, comboKeys, delay = 200) {
   if (!comboKeys.includes(key)) return false
@@ -7,21 +17,7 @@ function doesCompleteCombo(key, comboKeys, delay = 200) {
     .every((k) => isKeyDown(k) && keyDownTime(k) < delay)
 }
 
-export function Keyboard({
-  element,
-  compositionStateChange,
-  insertText,
-  undo,
-  redo,
-  copy,
-  cut,
-  selectColumn,
-  selectRow,
-  selectAll,
-  move,
-  clearSelection,
-  erase,
-}) {
+export function init(element, emit) {
   element.addEventListener('compositionstart', (e) => {
     compositionStateChange('start', e.data)
   })
@@ -104,15 +100,15 @@ export function Keyboard({
         mode = 'displace'
       }
 
-      move(arrowMotion, mode)
+      m_ove(arrowMotion, mode)
     }
 
     if (e.key === 'Backspace') {
-      erase(true, e.ctrlKey)
+      e_rase(true, e.ctrlKey)
     }
 
     if (e.key === 'Delete') {
-      erase(false, e.ctrlKey)
+      e_rase(false, e.ctrlKey)
     }
   })
 }

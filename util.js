@@ -1,3 +1,4 @@
+// AI Generated
 /**
  * Debounces a function.
  *
@@ -27,4 +28,31 @@ export function debounce(func, wait, immediate = false) {
       func.apply(context, args)
     }
   }
+}
+
+// AI Generated
+/**
+ * Partitions an array based on a predicate function.
+ *
+ * @param {Array} array - The array to partition.
+ * @param {Function} predicate - The predicate function.
+ * @returns {Array} - An array of [pass,fail]
+ */
+export function partition(array, predicate) {
+  return array.reduce(
+    (acc, elem, index) => {
+      acc[predicate(elem, index) ? 0 : 1].push(elem)
+      return acc
+    },
+    [[], []],
+  )
+}
+
+export function mapChanges([value, changes], fn, ...fns) {
+  const [newValue, newChanges] = fn(value)
+  const ret = [newValue, [...changes, ...newChanges]]
+  if (fns.length > 0) {
+    return mapChanges(ret, ...fns)
+  }
+  return ret
 }

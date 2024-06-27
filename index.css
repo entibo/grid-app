@@ -8,21 +8,16 @@
 
 body {
 }
+
 .grid {
   position: relative;
   user-select: none;
   overflow: auto;
-  height: 56vh;
-  width: 54vw;
+  height: 95vh;
+  width: 95vw;
 }
 
-.grid.alt {
-  cursor: pointer;
-}
-
-.grid .rows {
-  width: fit-content;
-  height: fit-content;
+.grid {
   --grid-color: lightgrey;
   background: linear-gradient(var(--grid-color) 1px, transparent 1px)
       calc(var(--cell-size) / -2) 0 / var(--cell-size) var(--cell-size) repeat,
@@ -30,27 +25,32 @@ body {
       var(--cell-size) var(--cell-size) repeat;
 }
 
-.grid .row {
-  display: flex;
+.origin {
+  position: relative;
+  min-width: 100%;
+  min-height: 100%;
 }
 
-.grid .cell {
+.cells {
+}
+
+.cell {
+  position: absolute;
   width: var(--cell-size);
   height: var(--cell-size);
-  /* background: #fafafa; */
-  /* border: 1px solid lightgrey; */
-  border-right: none;
-  border-bottom: none;
-  flex-shrink: 0;
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 0 var(--cell-size) / 4;
-  overflow: hidden;
+  /* padding: 0 var(--cell-size) / 4; */
+  /* overflow: hidden; */
   text-transform: full-width;
 }
 
-.grid .cursor .selectionRange {
+.cursor {
+  position: relative;
+}
+
+.cursor .selectionRange {
   background: rgba(100, 100, 255, 0.1);
   position: absolute;
   top: 0;
@@ -60,7 +60,7 @@ body {
   pointer-events: none;
 }
 
-.grid .cursor .dashedRange {
+.cursor .dashedRange {
   pointer-events: none;
   position: absolute;
   top: 0;
@@ -70,7 +70,7 @@ body {
   outline: 2px dashed blueviolet;
 }
 
-.grid .cursor .inputRange {
+.cursor .inputRange {
   position: absolute;
   top: 1px;
   left: 1px;
@@ -82,11 +82,11 @@ body {
   display: flex;
 }
 
-.grid .cursor .inputRange.composing {
+.cursor .inputRange.composing {
   animation: pulsate 1s infinite;
 }
 
-.grid .textarea {
+.textarea {
   position: fixed;
   top: 0;
   left: 0;

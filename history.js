@@ -1,25 +1,38 @@
-export function history() {
+export function init() {
   return {
-    past: [],
-    future: [],
-    workingBackup: null,
+    stack: [],
+    index: -1,
   }
 }
 
-export function checkpoint(h, getState) {
-  h.past.push(getState())
-  h.future = []
-  h.workingBackup = null
+function lastIndex(h) {
+  return h.stack.length - 1
 }
 
-export function undo(h, getState, setState) {
-  if (!h.past.length) return
-  h.future.push(h.workingBackup ?? getState())
-  setState((h.workingBackup = h.past.pop()))
+export function canUndo(h) {
+  return h.index > 0
 }
 
-export function redo(h, getState, setState) {
-  if (!h.future.length) return
-  h.past.push(h.workingBackup ?? getState())
-  setState((h.workingBackup = h.future.pop()))
+export function canRedo(h) {
+  return h.index < lastIndex(h)
+}
+
+export function save(h, value) {
+  if (canRedo(h)) {
+    h.stack = h.stack.slice(0, h.index + 1)
+  }
+  h.stack.push(value)
+  h.index = lastIndex(h)
+}
+
+export function undo(h) {
+  if (!canUndo(h)) return
+  h.index--
+  return h.stack[h.index]
+}
+
+export function redo(h) {
+  if (!canUndo(h)) return
+  h.index++
+  return h.stack[h.index]
 }

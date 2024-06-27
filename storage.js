@@ -80,11 +80,12 @@ function decode(compressedBase64String) {
 
 export async function writeHash(value) {
   console.log('writeHash', JSON.stringify(value))
-  window.location.hash = await encode(value)
+  window.location.hash = value ? await encode(value) : ''
 }
 
 export async function readHash() {
-  return decode(window.location.hash.slice(1))
+  const hash = window.location.hash.slice(1)
+  return hash ? decode(hash) : ''
 }
 
 export function writeLocalStorage(key, value) {

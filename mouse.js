@@ -6,7 +6,7 @@ import {
   readRange,
   writeRange,
   writeText,
-} from './grid.js'
+} from './old/grid.js'
 import { listenToKeyStateChange } from './keyboard-global.js'
 
 function setPointerType(type = 'auto') {
