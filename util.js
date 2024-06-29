@@ -48,11 +48,8 @@ export function partition(array, predicate) {
   )
 }
 
-export function mapChanges([value, changes], fn, ...fns) {
-  const [newValue, newChanges] = fn(value)
-  const ret = [newValue, [...changes, ...newChanges]]
-  if (fns.length > 0) {
-    return mapChanges(ret, ...fns)
-  }
-  return ret
+export function filterMap(map, predicate) {
+  return new Map(
+    Array.from(map).filter(([key, value]) => predicate(key, value)),
+  )
 }

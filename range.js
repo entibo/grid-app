@@ -7,11 +7,11 @@ export function fromPoints({ x: x1, y: y1 }, { x: x2, y: y2 }) {
   }
 }
 
-export function move(range, { dx, dy }) {
+export function move(range, offset) {
   return {
     ...range,
-    x: range.x + dx,
-    y: range.y + dy,
+    x: range.x + offset.x,
+    y: range.y + offset.y,
   }
 }
 

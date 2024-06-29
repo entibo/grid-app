@@ -1,55 +1,63 @@
 import * as Grid from './grid.js'
+import { grid } from './grid.js'
 import * as History from './history.js'
 import * as Keyboard from './keyboard.js'
+import * as Mouse from './mouse.js'
+import * as View from './view.js'
 import * as Point from './point.js'
-import { mapChanges } from './util.js'
+import * as Range from './range.js'
 
-let grid = Grid.init()
-const history = History.init()
-const view = View.init()
-
-function restoreGrid(newGrid) {
-  grid = newGrid
+function restoreGrid(grid) {
+  Grid.setGrid(grid)
   cursorChanged(grid.cursor)
-  selectionChanged(Grid.getSelectionRange(grid))
+  selectionChanged(Grid.getSelectionRange())
   for (const cell of grid.cells) {
     restoreCell(cell)
   }
 }
 function restoreCell(cell) {}
 
-function checkpoint() {
-  History.save(history, grid)
-}
-
 export function undo() {
-  if (!History.canUndo(history)) return
-  const grid = History.undo(history)
+  if (!History.canUndo()) return
+  const grid = History.undo()
   restoreGrid(grid)
 }
 
 export function redo() {
-  if (!History.canRedo(history)) return
-  const grid = History.redo(history)
+  if (!History.canRedo()) return
+  const grid = History.redo()
   restoreGrid(grid)
 }
 
 export function cursorChanged(cursor) {
-  View.setCursor(view, cursor)
+  console.log('cursorChanged', cursor)
+  View.showCursor(cursor)
+  Keyboard.focus()
 }
+export function selectionChanged(selectionRange) {
+  console.log('selectionChanged', selectionRange)
+  View.showSelectionRange(selectionRange)
+  const text = Grid.readRange(selectionRange)
+  Keyboard.setValue(text)
+  Keyboard.focus()
+}
+
+export function cellCreated(cell) {}
+export function cellUpdated(cell) {}
+export function cellMoved(cell) {}
+export function cellRemoved(cell) {}
 
 export function copy() {}
 export function cut() {
-  checkpoint()
-  const range = Grid.getSelectionRange(grid)
-  Grid.removeRange(grid, range)
+  History.save(grid)
+  const range = Grid.getSelectionRange()
+  Grid.removeRange(range)
 }
 
 export function selectColumn() {
-  const range = Grid.getSelectionRange(grid)
+  const range = Grid.getSelectionRange()
   if (!range) return
-  grid = Grid.setCursorAndSelectionStart(
-    grid,
+  Grid.setCursorAndSelectionStart(
     {
       x: grid.cursor.x,
       y: 0,
@@ -62,10 +70,9 @@ export function selectColumn() {
 }
 
 export function selectRow() {
-  const range = Grid.getSelectionRange(grid)
+  const range = Grid.getSelectionRange()
   if (!range) return
-  grid = Grid.setCursorAndSelectionStart(
-    grid,
+  Grid.setCursorAndSelectionStart(
     {
       x: 0,
       y: grid.cursor.y,
@@ -83,10 +90,8 @@ export function selectAll() {
 }
 
 export function clearSelection() {
-  grid = Grid.clearSelection(grid)
+  Grid.clearSelection(grid)
 }
-
-Keyboard.init(view.textarea)
 
 export function compositionStateChange(compositionState, compositionText) {
   if (compositionState === 'end') {
@@ -98,34 +103,60 @@ export function compositionStateChange(compositionState, compositionText) {
 }
 
 export function insertText(text, type) {
-  // Grid.insertText(grid, text, type)
+  // Grid.insertText( text, type)
 }
 
-Keyboard({
-  move(offset, mode) {
-    if (mode === 'select') {
-      handleChanges(Grid.setCursor(grid, Point.move(grid.cursor, offset)))
+export function moveCursor(offset) {
+  console.log('moveCursor', offset)
+  Grid.setCursorAndSelectionStart(Point.add(grid.cursor, offset))
+}
 
-      return mapChanges(
-        Grid.setCursor(grid, Point.move(grid.cursor, offset)),
-        (grid) => ({ ...grid, cursor: Point.move(grid.cursor, offset) }),
-      )
-    }
+export function moveCursorAndSelect(offset) {
+  Grid.setCursor(Point.add(grid.cursor, offset))
+}
 
-    if (mode === 'normal') {
-      handleChanges(
-        Grid.setCursor(grid, { x: grid.cursor.x + dx, y: grid.cursor.y + dy }),
-      )
-    }
+export function moveCursorAndDisplace(offset) {
+  History.save(grid)
+  Grid.displaceRangeBy(Grid.getSelectionRange(), offset)
+  Grid.moveSelectionBy(offset)
+}
 
-    if (mode === 'displace') {
-      History.save(history, Grid.save(grid))
-      handleChanges(
-        Grid.nudgeRangeBy(grid, Grid.getSelectionRange(grid), {
-          dx,
-          dy,
-        }),
-      )
+export function eraseBackward(isWord) {}
+
+export function eraseForward(isWord) {}
+
+// Mouse stuff
+
+export function leftClickStart(start, shiftKey) {
+  const selectionRange = Grid.getSelectionRange()
+  if (selectionRange && Range.contains(selectionRange, start)) {
+    View.showDashedRange(selectionRange)
+    return {
+      move(current) {
+        const offset = Point.sub(current, start)
+        View.showDashedRange(Range.move(selectionRange, offset))
+      },
+      end(end) {
+        View.hideDashedRange()
+        const offset = Point.sub(end, start)
+        if (offset.x === 0 && offset.y === 0) return
+        History.save(grid)
+        Grid.moveRangeBy(Grid.getSelectionRange(), offset)
+      },
     }
-  },
-})
+  } else {
+    if (shiftKey) {
+      Grid.setCursor(start)
+    } else {
+      Grid.setCursorAndSelectionStart(start)
+    }
+    return {
+      move(current) {
+        Grid.setCursor(current)
+      },
+      end(end) {},
+    }
+  }
+}
+
+export function rightClickStart(start, shiftKey) {}

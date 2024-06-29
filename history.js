@@ -1,38 +1,34 @@
-export function init() {
-  return {
-    stack: [],
-    index: -1,
+let stack = []
+let index = -1
+
+function lastIndex() {
+  return stack.length - 1
+}
+
+export function canUndo() {
+  return index > 0
+}
+
+export function canRedo() {
+  return index < lastIndex()
+}
+
+export function save(value) {
+  if (canRedo()) {
+    stack = stack.slice(0, index + 1)
   }
+  stack.push(value)
+  index = lastIndex()
 }
 
-function lastIndex(h) {
-  return h.stack.length - 1
+export function undo() {
+  if (!canUndo()) return
+  index--
+  return stack[index]
 }
 
-export function canUndo(h) {
-  return h.index > 0
-}
-
-export function canRedo(h) {
-  return h.index < lastIndex(h)
-}
-
-export function save(h, value) {
-  if (canRedo(h)) {
-    h.stack = h.stack.slice(0, h.index + 1)
-  }
-  h.stack.push(value)
-  h.index = lastIndex(h)
-}
-
-export function undo(h) {
-  if (!canUndo(h)) return
-  h.index--
-  return h.stack[h.index]
-}
-
-export function redo(h) {
-  if (!canUndo(h)) return
-  h.index++
-  return h.stack[h.index]
+export function redo() {
+  if (!canUndo()) return
+  index++
+  return stack[index]
 }

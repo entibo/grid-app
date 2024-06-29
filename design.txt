@@ -124,3 +124,10 @@ Dashed outline
     Clicking and dragging:
       Outline moves relative to drag
 
+
+Note on textarea focus
+  I want to set focus to it as soon as user clicks on the grid
+  but the clicking itself can move focus away
+  option 1. mousedown event.preventDefault()
+  option 2. setTimeout(() => focus(), 0)
+  option 3. TBD

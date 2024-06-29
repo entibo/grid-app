@@ -1,9 +1,10 @@
 import { cellSize } from './global.js'
 import { debounce } from './util.js'
 
-export function getGridPositionFromMouseEvent(e) {
-  // todo: position relative to origin
-  // use e.clientX and e.clientY
+export function screenToGrid(e) {
+  const rect = origin.getBoundingClientRect()
+  const x = Math.floor((e.clientX - rect.left) / cellSize)
+  const y = Math.floor((e.clientY - rect.top) / cellSize)
   return { x, y }
 }
 
@@ -74,17 +75,17 @@ origin.appendChild(cursor)
 
 const selectionRange = document.createElement('div')
 selectionRange.className = 'range selectionRange'
-cursor.appendChild(selectionRange)
+origin.appendChild(selectionRange)
 
 const dashedRange = document.createElement('div')
 dashedRange.className = 'range dashedRange'
 dashedRange.style.display = 'none'
-cursor.appendChild(dashedRange)
+origin.appendChild(dashedRange)
 
 const inputRange = document.createElement('div')
 inputRange.className = 'range inputRange'
 for (let x = 0; x < 20; x++) {
-  cursor.appendChild(inputRange)
+  origin.appendChild(inputRange)
   // Fake cells to display user input
   const cell = document.createElement('div')
   cell.className = 'cell'
@@ -92,17 +93,25 @@ for (let x = 0; x < 20; x++) {
   inputRange.appendChild(cell)
 }
 
-const textarea = document.createElement('textarea')
-textarea.className = 'textarea'
-textarea.tabIndex = -1
-grid.appendChild(textarea)
+function showElement(element, { x, y, dx = 0, dy = 0 }) {
+  element.style.display = 'block'
+  element.style.translate = `${x * cellSize}px ${y * cellSize}px`
+  element.style.width = `${(dx + 1) * cellSize}px`
+  element.style.height = `${(dy + 1) * cellSize}px`
+}
+function hideElement(element) {
+  element.style.display = 'none'
+}
 
-export function hideInputRange() {
-  dom.inputRange.classList.remove('composing')
-  for (const cell of dom.inputRange.children) {
-    cell.style.display = 'none'
-  }
-  dom.inputRange.style.width = ''
+export function showCursor(position) {
+  showElement(cursor, position)
+}
+export function showSelectionRange(range) {
+  showElement(selectionRange, range)
+}
+
+export function hideSelectionRange() {
+  hideElement(selectionRange)
 }
 
 export function showInputRange() {
@@ -111,17 +120,36 @@ export function showInputRange() {
 
 export function updateInputRange(compositionText) {
   for (const cell of dom.inputRange.children) {
-    cell.style.display = 'none'
+    hideElement(cell)
   }
   for (let i = 0; i < compositionText.length; i++) {
     const cell = dom.inputRange.children[i]
     cell.textContent = compositionText[i]
     cell.style.display = 'flex'
   }
-  dom.inputRange.style.left = `${cursor.dx * cellSize}px`
-  dom.inputRange.style.top = `${cursor.dy * cellSize}px`
-  dom.inputRange.style.width = `${compositionText.length * cellSize + 1}px`
-  // dom.inputRange.style.height = `${text.length * cellSize + 1}px`
+
+  showElement(dom.inputRange, {
+    x: 0,
+    y: 0,
+    dx: compositionText.length,
+    dy: 0,
+  })
+}
+
+export function hideInputRange() {
+  dom.inputRange.classList.remove('composing')
+  for (const cell of dom.inputRange.children) {
+    hideElement(cell)
+  }
+  dom.inputRange.style.width = ''
+}
+
+export function showDashedRange(range) {
+  showElement(dashedRange, range)
+}
+
+export function hideDashedRange() {
+  hideElement(dashedRange)
 }
 
 //

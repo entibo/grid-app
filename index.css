@@ -9,9 +9,23 @@
 body {
 }
 
+/* Invisible element used for capturing input */
+textarea {
+  position: fixed;
+  top: 0;
+  left: 0;
+  appearance: none;
+  border: none;
+  outline: none;
+  background: none;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .grid {
   position: relative;
   user-select: none;
+  -webkit-user-select: none;
   overflow: auto;
   height: 95vh;
   width: 95vw;
@@ -47,26 +61,26 @@ body {
 }
 
 .cursor {
-  position: relative;
+  position: absolute;
+  width: calc(var(--cell-size) + 1px);
+  height: calc(var(--cell-size) + 1px);
+  outline: 1px solid rgba(0, 0, 0, 0.7);
 }
 
-.cursor .selectionRange {
+.selectionRange {
   background: rgba(100, 100, 255, 0.1);
   position: absolute;
   top: 0;
   left: 0;
-  padding-left: calc(1px + var(--cell-size));
-  padding-top: calc(1px + var(--cell-size));
-  pointer-events: none;
+  /* pointer-events: none; */
+  cursor: grab;
 }
 
-.cursor .dashedRange {
+.dashedRange {
   pointer-events: none;
   position: absolute;
   top: 0;
   left: 0;
-  padding-left: calc(1px + var(--cell-size));
-  padding-top: calc(1px + var(--cell-size));
   outline: 2px dashed blueviolet;
 }
 
@@ -74,8 +88,6 @@ body {
   position: absolute;
   top: 1px;
   left: 1px;
-  width: calc(var(--cell-size) - 1px);
-  height: calc(var(--cell-size) - 1px);
   pointer-events: none;
   /* outline: 1px solid rgba(0, 0, 0, 0.7); */
   border-left: 2px solid salmon;
@@ -84,18 +96,6 @@ body {
 
 .cursor .inputRange.composing {
   animation: pulsate 1s infinite;
-}
-
-.textarea {
-  position: fixed;
-  top: 0;
-  left: 0;
-  appearance: none;
-  border: none;
-  outline: none;
-  background: none;
-  opacity: 0;
-  pointer-events: none;
 }
 
 @keyframes pulsate {
