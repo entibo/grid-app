@@ -14,12 +14,12 @@ textarea {
   position: fixed;
   top: 0;
   left: 0;
-  appearance: none;
+  /* appearance: none;
   border: none;
   outline: none;
   background: none;
   opacity: 0;
-  pointer-events: none;
+  pointer-events: none; */
 }
 
 .grid {

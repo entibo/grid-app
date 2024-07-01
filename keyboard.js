@@ -1,6 +1,8 @@
 import {
   clearSelection,
   compositionStateChange,
+  copy,
+  cut,
   eraseBackward,
   eraseForward,
   insertText,
@@ -12,7 +14,7 @@ import {
   selectColumn,
   selectRow,
   undo,
-} from './controller.js'
+} from './index.js'
 import { isKeyDown, keyDownTime } from './keyboard-global.js'
 
 function doesCompleteCombo(key, comboKeys, delay = 200) {
@@ -35,6 +37,7 @@ export function setValue(value) {
 
 export function focus() {
   textarea.focus({ preventScroll: true })
+  textarea.select()
 }
 
 textarea.addEventListener('focus', () => {
@@ -62,6 +65,7 @@ textarea.addEventListener('input', (e) => {
   // if (e.inputType === 'insertFromPaste') return
 
   insertText(e.data, e.inputType)
+  focus()
 })
 
 textarea.addEventListener('keydown', (e) => {

@@ -2,25 +2,25 @@ import { cellSize } from './global.js'
 import { debounce } from './util.js'
 
 export function screenToGrid(e) {
-  const rect = origin.getBoundingClientRect()
+  const rect = $origin.getBoundingClientRect()
   const x = Math.floor((e.clientX - rect.left) / cellSize)
   const y = Math.floor((e.clientY - rect.top) / cellSize)
   return { x, y }
 }
 
-const grid = document.createElement('div')
-grid.className = 'grid'
-grid.style.setProperty('--cell-size', `${cellSize}px`)
-document.body.appendChild(grid)
+const $grid = document.createElement('div')
+$grid.className = 'grid'
+$grid.style.setProperty('--cell-size', `${cellSize}px`)
+document.body.appendChild($grid)
 
-const origin = document.createElement('div')
-origin.className = 'origin'
-grid.appendChild(origin)
+const $origin = document.createElement('div')
+$origin.className = 'origin'
+$grid.appendChild($origin)
 
 {
-  const padder = document.createElement('div')
-  padder.className = ''
-  grid.appendChild(padder)
+  const $padder = document.createElement('div')
+  $padder.className = ''
+  $grid.appendChild($padder)
 
   const scrollPadding = {
     left: 0,
@@ -32,24 +32,24 @@ grid.appendChild(origin)
   function setPadding(amount) {
     const diff = amount - scrollPadding.top
     scrollPadding.top = amount
-    grid.scrollTop += diff
-    origin.style.paddingTop = `${scrollPadding.top}px`
+    $grid.scrollTop += diff
+    $origin.style.paddingTop = `${scrollPadding.top}px`
   }
   const setPaddingDebounced = debounce(setPadding, 100)
 
   const scrollPaddingIncrement = 400
-  grid.addEventListener('scroll', () => {
+  $grid.addEventListener('scroll', () => {
     const targetScrollPadingTop =
       Math.max(
         0,
 
         Math.floor(
-          1 + (scrollPadding.top - grid.scrollTop) / scrollPaddingIncrement,
+          1 + (scrollPadding.top - $grid.scrollTop) / scrollPaddingIncrement,
         ),
       ) * scrollPaddingIncrement
     console.log(
       'grid.scrollTop:',
-      grid.scrollTop,
+      $grid.scrollTop,
       'padding:',
       scrollPadding.top,
     )
@@ -65,54 +65,141 @@ grid.appendChild(origin)
   })
 }
 
-const cells = document.createElement('div')
-cells.className = 'cells'
-origin.appendChild(cells)
+const $cells = document.createElement('div')
+$cells.className = 'cells'
+$origin.appendChild($cells)
 
-const cursor = document.createElement('div')
-cursor.className = 'cursor'
-origin.appendChild(cursor)
+const $cursor = document.createElement('div')
+$cursor.className = 'cursor'
+$origin.appendChild($cursor)
 
-const selectionRange = document.createElement('div')
-selectionRange.className = 'range selectionRange'
-origin.appendChild(selectionRange)
+const $selectionRange = document.createElement('div')
+$selectionRange.className = 'range selectionRange'
+$origin.appendChild($selectionRange)
 
-const dashedRange = document.createElement('div')
-dashedRange.className = 'range dashedRange'
-dashedRange.style.display = 'none'
-origin.appendChild(dashedRange)
+const $dashedRange = document.createElement('div')
+$dashedRange.className = 'range dashedRange'
+$dashedRange.style.display = 'none'
+$origin.appendChild($dashedRange)
 
-const inputRange = document.createElement('div')
-inputRange.className = 'range inputRange'
+const $inputRange = document.createElement('div')
+$inputRange.className = 'range inputRange'
 for (let x = 0; x < 20; x++) {
-  origin.appendChild(inputRange)
+  $origin.appendChild($inputRange)
   // Fake cells to display user input
   const cell = document.createElement('div')
   cell.className = 'cell'
   cell.style.display = 'none'
-  inputRange.appendChild(cell)
+  $inputRange.appendChild(cell)
 }
 
-function showElement(element, { x, y, dx = 0, dy = 0 }) {
-  element.style.display = 'block'
-  element.style.translate = `${x * cellSize}px ${y * cellSize}px`
-  element.style.width = `${(dx + 1) * cellSize}px`
-  element.style.height = `${(dy + 1) * cellSize}px`
+//
+
+const cellIdToElementMap = new Map()
+
+setInterval(() => {
+  console.log('cellIdToElementMap.size:', cellIdToElementMap.size)
+}, 10000)
+
+//
+
+function showElement($) {
+  $.style.display = 'block'
 }
-function hideElement(element) {
-  element.style.display = 'none'
+
+function hideElement($) {
+  $.style.display = 'none'
 }
+
+function setPosition($, { x, y }) {
+  $.style.translate = `${x * cellSize}px ${y * cellSize}px`
+}
+
+function setDimensions($, { dx, dy }) {
+  $.style.width = `${(dx + 1) * cellSize}px`
+  $.style.height = `${(dy + 1) * cellSize}px`
+}
+
+//
+
+export function cellCreated({ id, value, position }) {
+  const $cell = document.createElement('div')
+  $cell.className = 'cell'
+  $cells.appendChild($cell)
+
+  setPosition($cell, position)
+  $cell.textContent = value
+
+  cellIdToElementMap.set(id, $cell)
+}
+
+// Same as cellCreated, except we are
+// guaranteed that cellCreated was called
+// with this id in the past
+export function cellRestored({ id, value, position }) {
+  const $cell = cellIdToElementMap.get(id)
+  if (!$cell.isConnected) {
+    $cells.appendChild($cell)
+  }
+
+  setPosition($cell, position)
+  $cell.textContent = value
+}
+
+export function cellUpdated({ id, value }) {
+  const $cell = cellIdToElementMap.get(id)
+  $cell.textContent = value
+}
+
+export function cellMoved({ id, position }) {
+  const $cell = cellIdToElementMap.get(id)
+  setPosition($cell, position)
+}
+
+export function cellRemoved({ id }) {
+  const $cell = cellIdToElementMap.get(id)
+  $cell.remove()
+  // cellIdToElementMap.delete(id)
+}
+
+//
+
+//
 
 export function showCursor(position) {
-  showElement(cursor, position)
+  showElement($cursor)
+  setPosition($cursor, position)
 }
+
+export function hideCursor() {
+  hideElement($cursor)
+}
+
+//
+
 export function showSelectionRange(range) {
-  showElement(selectionRange, range)
+  showElement($selectionRange)
+  setPosition($selectionRange, range)
+  setDimensions($selectionRange, range)
 }
 
 export function hideSelectionRange() {
-  hideElement(selectionRange)
+  hideElement($selectionRange)
 }
+
+//
+
+export function showDashedRange(range) {
+  showElement($dashedRange)
+  setPosition($dashedRange, range)
+  setDimensions($dashedRange, range)
+}
+
+export function hideDashedRange() {
+  hideElement($dashedRange)
+}
+
+//
 
 export function showInputRange() {
   dom.inputRange.classList.add('composing')
@@ -128,12 +215,15 @@ export function updateInputRange(compositionText) {
     cell.style.display = 'flex'
   }
 
-  showElement(dom.inputRange, {
+  const range = {
     x: 0,
     y: 0,
     dx: compositionText.length,
     dy: 0,
-  })
+  }
+  showElement(dom.inputRange)
+  setPosition(dom.inputRange, range)
+  setDimensions(dom.inputRange, range)
 }
 
 export function hideInputRange() {
@@ -142,74 +232,4 @@ export function hideInputRange() {
     hideElement(cell)
   }
   dom.inputRange.style.width = ''
-}
-
-export function showDashedRange(range) {
-  showElement(dashedRange, range)
-}
-
-export function hideDashedRange() {
-  hideElement(dashedRange)
-}
-
-//
-//
-//
-// recycling bin
-//
-
-function createCell({ x, y }) {
-  const cell = document.createElement('div')
-  cell.className = 'cell'
-  cell.dataset.x = x
-  cell.dataset.y = y
-  cell.style.translate = `${x * cellSize}px ${y * cellSize}px`
-  return cell
-}
-
-function handleDeltaCell({ cell, created, updated, moved, removed }) {
-  if (created) {
-    cell.element = document.createElement('div')
-    cell.element.className = 'cell'
-    dom.cells.appendChild(cell.element)
-  }
-  if (updated) {
-    cell.element.textContent = cell.value
-  }
-  if (moved) {
-    cell.element.style.translate = [
-      cell.position.x * cellSize,
-      cell.position.y * cellSize,
-    ]
-      .map((s) => s + 'px')
-      .join(' ')
-  }
-  if (removed) {
-    cell.element.remove()
-  }
-}
-
-function restoreCellsOrWhatever() {
-  const oldCells = grid.cells
-  grid.cells = cells
-  for (const cell of cells) {
-    if (!cell.element.isConnected) {
-      dom.cells.appendChild(cell.element)
-    }
-    cell.element.textContent = cell.value
-    cell.style.translate = [
-      cell.position.x * cellSize,
-      cell.position.y * cellSize,
-    ]
-      .map((s) => s + 'px')
-      .join(' ')
-
-    cell.dataset.stateId = stateId
-  }
-
-  for (const oldCell of oldCells) {
-    if (oldCell.element.dataset.stateId != stateId) {
-      oldCell.element.remove()
-    }
-  }
 }

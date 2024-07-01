@@ -13,7 +13,7 @@ export function canRedo() {
   return index < lastIndex()
 }
 
-export function save(value) {
+export function push(value) {
   if (canRedo()) {
     stack = stack.slice(0, index + 1)
   }
@@ -23,12 +23,10 @@ export function save(value) {
 
 export function undo() {
   if (!canUndo()) return
-  index--
-  return stack[index]
+  return stack[--index]
 }
 
 export function redo() {
   if (!canUndo()) return
-  index++
-  return stack[index]
+  return stack[++index]
 }

@@ -1,258 +1,220 @@
+import * as Grid from './grid.js'
+import { grid } from './grid.js'
 import * as History from './history.js'
-import * as Grid from './old/grid.js'
-import { Dom } from './old/dom.js'
-import { init } from './keyboard.js'
-import { Mouse } from './mouse.js'
-import { cellSize } from './global.js'
-import { debounce } from './util.js'
-import { readHash, writeHash } from './storage.js'
+import * as Keyboard from './keyboard.js'
+import * as Mouse from './mouse.js'
+import * as View from './view.js'
+import * as Point from './point.js'
+import * as Range from './range.js'
 
-const dom = Dom({
-  root: document.body,
-})
+function restoreGrid(grid) {
+  console.log('restoreGrid', grid)
 
-const grid = (() => {
-  const maxRange = { x: 0, y: 0, dx: 0, dy: 0 }
+  const oldCellIds = new Set(Grid.getCells().map((cell) => cell.id))
 
-  const read = function ({ x, y }) {
-    const value = dom.readCell({ x, y })
-    return value
+  Grid.setGrid(grid)
+
+  for (const cell of Grid.getCells()) {
+    View.cellRestored(cell)
+    oldCellIds.delete(cell.id)
   }
 
-  const debouncedWriteHash = debounce(() => {
-    writeHash(Grid.trimText(grid.readEntireGrid()))
-  }, 500)
-
-  const write = function ({ x, y }, value) {
-    if (value) {
-      if (x > maxRange.dx) {
-        console.log('increasing maxRange.x', x)
-      }
-      if (y > maxRange.dy) {
-        console.log('increasing maxRange.y', y)
-      }
-      maxRange.dx = Math.max(maxRange.dx, x)
-      maxRange.dy = Math.max(maxRange.dy, y)
-      debouncedWriteHash()
-    }
-    console.log('write', x, y, value)
-    dom.writeCell({ x, y }, value)
+  for (const id of oldCellIds) {
+    View.cellRemoved({ id })
   }
 
-  return {
-    read,
-    write,
-    readEntireGrid() {
-      return Grid.readRange({ read }, maxRange)
-    },
-    empty() {
-      Grid.deleteRange({ write }, maxRange)
-    },
-  }
-})()
-
-const cursor = {
-  x: 0,
-  y: 0,
-  dx: 0,
-  dy: 0,
-  positive: { x: 0, y: 0, dx: 0, dy: 0 },
-  set({ x, y, dx = 0, dy = 0 }) {
-    cursor.positive = Grid.positiveRange({ x, y, dx, dy })
-    console.log('cursor', x, y, dx, dy)
-    cursor.x = x
-    cursor.y = y
-    cursor.dx = dx
-    cursor.dy = dy
-    dom.cursor.style.left = `${x * cellSize}px`
-    dom.cursor.style.top = `${y * cellSize}px`
-    dom.selectionRange.style.left = `${(cursor.positive.x - x) * cellSize}px`
-    dom.selectionRange.style.top = `${(cursor.positive.y - y) * cellSize}px`
-    dom.selectionRange.style.width = `${(cursor.positive.dx + 1) * cellSize}px`
-    dom.selectionRange.style.height = `${(cursor.positive.dy + 1) * cellSize}px`
-    dom.textarea.value = Grid.readRange(grid, cursor)
-    setTimeout(() => {
-      dom.textarea.focus()
-      dom.textarea.select()
-    }, 0)
-  },
+  cursorChanged(grid.cursor)
+  selectionChanged(Grid.getSelectionRange())
 }
 
-const history = (() => {
-  function getState() {
-    return {
-      cursor: { ...cursor },
-      text: grid.readEntireGrid(),
-    }
+export function cellCreated(cell) {
+  View.cellCreated(cell)
+}
+export function cellUpdated(cell) {
+  View.cellUpdated(cell)
+}
+export function cellMoved(cell) {
+  View.cellMoved(cell)
+}
+export function cellRemoved(cell) {
+  View.cellRemoved(cell)
+}
+export function cursorChanged(cursor) {
+  if(!cursor) {
+    View.hideCursor()
+    return
   }
-
-  function setState({ cursor: newCursor, text }) {
-    cursor.set(newCursor)
-    grid.empty()
-    Grid.writeText(grid, { x: 0, y: 0 }, text)
+  View.showCursor(cursor)
+  Keyboard.focus()
+}
+export function selectionChanged(selectionRange) {
+  if (!selectionRange) {
+    View.hideSelectionRange()
+    return
   }
+  View.showSelectionRange(selectionRange)
+  const text = Grid.readRange(selectionRange)
+  console.log(
+    'selectionChanged',
+    selectionRange,
+    text,
+    Grid.getCells().filter((cell) =>
+      Range.contains(selectionRange, cell.position),
+    ),
+  )
+  Keyboard.setValue(text)
+  Keyboard.focus()
+}
 
-  const h = History.history()
-  return {
-    checkpoint: () => History.checkpoint(h, getState),
-    undo: () => History.undo(h, getState, setState),
-    redo: () => History.redo(h, getState, setState),
-  }
-})()
+//
 
-const mouse = Mouse({
-  grid,
-  history,
-  cursor,
-  containerElement: dom.grid,
-  setDashedRange(range) {
-    if (!range) {
-      dom.dashedRange.style.display = 'none'
-      return
-    }
-    const { dx, dy } = range
-    dom.dashedRange.style.display = 'block'
-    dom.dashedRange.style.left = `${
-      (cursor.positive.x - cursor.x + dx) * cellSize
-    }px`
-    dom.dashedRange.style.top = `${
-      (cursor.positive.y - cursor.y + dy) * cellSize
-    }px`
-    dom.dashedRange.style.width = `${(Math.abs(cursor.dx) + 1) * cellSize}px`
-    dom.dashedRange.style.height = `${(Math.abs(cursor.dy) + 1) * cellSize}px`
-  },
-})
+export function checkpoint() {
+  History.push(grid)
+}
 
+export function undo() {
+  if (!History.canUndo()) return
+  const grid = History.undo()
+  restoreGrid(grid)
+}
 
-const keyboard = init({
-  element: dom.textarea,
+export function redo() {
+  if (!History.canRedo()) return
+  const grid = History.redo()
+  restoreGrid(grid)
+}
 
-  undo: history.undo,
-  redo: history.redo,
+//
 
-  compositionStateChange(compositionState, compositionText) {
-    if (compositionState === 'end') {
-      hideInputRange()
-    } else if (compositionState === 'start') {
-      showInputRange()
-    }
-    updateInputRange(compositionText)
-  },
+export function copy() {
+  console.log('copy')
+}
 
-  insertText(text, type) {
-    console.log('insertText', text, type)
-    history.checkpoint()
-    Grid.deleteRange(grid, cursor)
-    const range = Grid.writeText(grid, cursor, text)
-    if (range) cursor.set(range)
-  },
+export function cut() {
+  console.log('cut')
+  const range = Grid.getSelectionRange()
+  Grid.removeRange(range)
+  checkpoint()
+  Keyboard.focus()
+}
 
-  copy() {
-    console.log('copy')
-  },
-  cut() {
-    console.log('cut')
-    history.checkpoint()
-    Grid.deleteRange(grid, cursor)
-  },
+//
 
-  selectColumn() {
-    console.log('selectColumn')
-    cursor.set({
-      x: cursor.x,
+export function selectColumn() {
+  const range = Grid.getSelectionRange()
+  if (!range) return
+  Grid.setCursorAndSelectionStart(
+    {
+      x: grid.cursor.x,
       y: 0,
-      dx: cursor.dx,
-      dy: 10,
-    })
-  },
-  selectRow() {
-    console.log('selectRow')
-    cursor.set({
+    },
+    {
+      x: grid.selectionStart.x,
+      y: 99999,
+    },
+  )
+}
+
+export function selectRow() {
+  const range = Grid.getSelectionRange()
+  if (!range) return
+  Grid.setCursorAndSelectionStart(
+    {
       x: 0,
-      y: cursor.y,
-      dx: 10,
-      dy: cursor.dy,
-    })
-  },
-  selectAll() {
-    console.log('selectAll')
-    cursor.set({
-      x: 0,
-      y: 0,
-      dx: 10,
-      dy: 10,
-    })
-  },
-  clearSelection() {
-    cursor.set({ x: cursor.x, y: cursor.y, dx: 0, dy: 0 })
-  },
+      y: grid.cursor.y,
+    },
+    {
+      x: 99999,
+      y: grid.selectionStart.y,
+    },
+  )
+}
 
-  move({ dx, dy }, mode) {
-    console.log('move', [dx, dy].join(', '), mode)
-    let x = cursor.x + dx
-    let y = cursor.y + dy
+export function selectAll() {
+  selectColumn()
+  selectRow()
+}
 
-    if (mode === 'select') {
-      cursor.set({
-        x,
-        y,
-        dx: cursor.dx - dx,
-        dy: cursor.dy - dy,
-      })
-    }
+export function clearSelection() {
+  Grid.clearSelection(grid)
+}
 
-    if (mode === 'displace') {
-      history.checkpoint()
-      Grid.moveRange(grid, cursor, { dx, dy })
-      cursor.set({ ...cursor, x, y })
-    }
-
-    if (mode === 'normal') {
-      // Jump to the other side of the selection range
-      if (Math.sign(dx) === Math.sign(cursor.dx)) {
-        x += cursor.dx
-      }
-      if (Math.sign(dy) === Math.sign(cursor.dy)) {
-        y += cursor.dy
-      }
-      cursor.set({ ...cursor, x, y })
-    }
-  },
-
-  erase(isBack, isWord) {
-    console.log('erase', isBack, isWord)
-    history.checkpoint()
-    if (isWord) {
-      // TODO
-    } else {
-      Grid.deleteRange(grid, cursor)
-    }
-    // move cursor to the left or right?
-  },
-})
-
-/// init
-
-const initText = await readHash()
-Grid.writeText(grid, { x: 0, y: 0 }, initText)
-
-function writeSample() {
-  history.checkpoint()
-  Grid.writeText(grid, { x: 0, y: 0 }, 'Hello, World!')
-
-  // Insert 20 random characters into the grid
-  for (let i = 0; i < 10; i++) {
-    Grid.writeText(
-      grid,
-      {
-        x: Math.floor(Math.random() * 10),
-        y: Math.floor(Math.random() * 10),
-      },
-      String.fromCharCode(65 + Math.floor(Math.random() * 26)),
-    )
+export function compositionStateChange(compositionState, compositionText) {
+  if (compositionState === 'end') {
+    hideInputRange()
+  } else if (compositionState === 'start') {
+    showInputRange()
   }
+  updateInputRange(compositionText)
+}
 
-  addEventListener('focus', () => {
-    cursor.set({ x: 10, y: 10 })
+export function insertText(text, type) {
+  console.log('insertText', text, type)
+  Grid.insertText(text)
+  checkpoint()
+}
+
+export function moveCursor(offset) {
+  console.log('moveCursor', offset)
+  Grid.setCursorAndSelectionStart(Point.add(grid.cursor, offset))
+}
+
+export function moveCursorAndSelect(offset) {
+  Grid.setCursor(Point.add(grid.cursor, offset))
+}
+
+export function moveCursorAndDisplace(offset) {
+  Grid.displaceRangeBy(Grid.getSelectionRange(), offset)
+  Grid.moveSelectionBy(offset)
+  checkpoint()
+}
+
+export function eraseBackward(isWord) {
+  console.log('eraseBackward', isWord)
+  Grid.removeRange(Grid.getSelectionRange())
+  Grid.setCursorAndSelectionStart({
+    x: grid.cursor.x - 1,
+    y: grid.cursor.y,
   })
+  checkpoint()
 }
+
+export function eraseForward(isWord) {}
+
+// Mouse stuff
+
+export function leftClickStart(start, shiftKey) {
+  const selectionRange = Grid.getSelectionRange()
+  if (selectionRange && Range.contains(selectionRange, start)) {
+    View.showDashedRange(selectionRange)
+    return {
+      move(current) {
+        const offset = Point.sub(current, start)
+        View.showDashedRange(Range.move(selectionRange, offset))
+      },
+      end(end) {
+        View.hideDashedRange()
+        const offset = Point.sub(end, start)
+        if (offset.x === 0 && offset.y === 0) return
+        Grid.moveRangeBy(Grid.getSelectionRange(), offset)
+        checkpoint()
+      },
+    }
+  } else {
+    if (shiftKey) {
+      Grid.setCursor(start)
+    } else {
+      Grid.setCursorAndSelectionStart(start)
+    }
+    return {
+      move(current) {
+        Grid.setCursor(current)
+      },
+      end(end) {},
+    }
+  }
+}
+
+export function rightClickStart(start, shiftKey) {}
+
+checkpoint()

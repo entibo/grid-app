@@ -23,3 +23,22 @@ export function contains(range, { x, y }) {
     y <= range.y + range.dy
   )
 }
+
+export function getBoundingRange(points) {
+  let x_min = Infinity
+  let x_max = -Infinity
+  let y_min = Infinity
+  let y_max = -Infinity
+  for (const { x, y } of points) {
+    x_min = Math.min(x_min, x)
+    x_max = Math.max(x_max, x)
+    y_min = Math.min(y_min, y)
+    y_max = Math.max(y_max, y)
+  }
+  return {
+    x: x_min,
+    y: y_min,
+    dx: x_max - x_min,
+    dy: y_max - y_min,
+  }
+}

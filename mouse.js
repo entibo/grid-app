@@ -1,6 +1,6 @@
 import { screenToGrid } from './view.js'
 import { listenToKeyStateChange } from './keyboard-global.js'
-import { leftClickStart, rightClickStart } from './controller.js'
+import { leftClickStart, rightClickStart } from './index.js'
 
 const LEFT = 0
 const RIGHT = 2
