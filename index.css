@@ -6,10 +6,13 @@
   box-sizing: border-box;
 }
 
+html,
 body {
+  margin: 0;
+  padding: 0;
 }
 
-/* Invisible element used for capturing input */
+/* Invisible element used for capturing keyboard input */
 textarea {
   position: fixed;
   top: 0;
@@ -24,25 +27,26 @@ textarea {
 
 .grid {
   position: relative;
+  width: 100dvw;
+  height: 100dvh;
+  overflow: hidden;
   user-select: none;
   -webkit-user-select: none;
-  overflow: auto;
-  height: 95vh;
-  width: 95vw;
+  overscroll-behavior: contain;
+  touch-action: none;
 }
 
-.grid {
-  --grid-color: lightgrey;
-  background: linear-gradient(var(--grid-color) 1px, transparent 1px)
-      calc(var(--cell-size) / -2) 0 / var(--cell-size) var(--cell-size) repeat,
-    linear-gradient(90deg, var(--grid-color) 1px, transparent 1px) 0 /
-      var(--cell-size) var(--cell-size) repeat;
+.gridBackground {
+  position: absolute;
+  top: calc(-1 * var(--cell-size));
+  left: calc(-1 * var(--cell-size));
+  width: calc(110% + var(--cell-size));
+  height: calc(110% + var(--cell-size));
+  --grid-color: rgb(216, 207, 204);
 }
 
 .origin {
-  position: relative;
-  min-width: 100%;
-  min-height: 100%;
+  position: absolute;
 }
 
 .cells {

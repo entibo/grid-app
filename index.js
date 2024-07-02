@@ -6,6 +6,7 @@ import * as Mouse from './mouse.js'
 import * as View from './view.js'
 import * as Point from './point.js'
 import * as Range from './range.js'
+import * as Pan from './pan.js'
 
 function restoreGrid(grid) {
   console.log('restoreGrid', grid)
@@ -40,7 +41,7 @@ export function cellRemoved(cell) {
   View.cellRemoved(cell)
 }
 export function cursorChanged(cursor) {
-  if(!cursor) {
+  if (!cursor) {
     View.hideCursor()
     return
   }
@@ -140,18 +141,21 @@ export function clearSelection() {
 }
 
 export function compositionStateChange(compositionState, compositionText) {
+  const selectionRange = Grid.getSelectionRange()
   if (compositionState === 'end') {
-    hideInputRange()
+    View.hideInputRange()
   } else if (compositionState === 'start') {
-    showInputRange()
+    View.showInputRange(selectionRange)
+  } else {
+    View.updateInputRange(selectionRange, compositionText)
   }
-  updateInputRange(compositionText)
 }
 
 export function insertText(text, type) {
   console.log('insertText', text, type)
   Grid.insertText(text)
   checkpoint()
+  
 }
 
 export function moveCursor(offset) {
@@ -183,18 +187,21 @@ export function eraseForward(isWord) {}
 
 // Mouse stuff
 
-export function leftClickStart(start, shiftKey) {
+export function leftClickStart(screen, shiftKey) {
+  const start = View.screenToGrid(screen)
   const selectionRange = Grid.getSelectionRange()
   if (selectionRange && Range.contains(selectionRange, start)) {
     View.showDashedRange(selectionRange)
     return {
-      move(current) {
+      move(screen) {
+        const current = View.screenToGrid(screen)
         const offset = Point.sub(current, start)
         View.showDashedRange(Range.move(selectionRange, offset))
       },
-      end(end) {
+      end(screen) {
+        const position = View.screenToGrid(screen)
         View.hideDashedRange()
-        const offset = Point.sub(end, start)
+        const offset = Point.sub(position, start)
         if (offset.x === 0 && offset.y === 0) return
         Grid.moveRangeBy(Grid.getSelectionRange(), offset)
         checkpoint()
@@ -207,14 +214,30 @@ export function leftClickStart(start, shiftKey) {
       Grid.setCursorAndSelectionStart(start)
     }
     return {
-      move(current) {
-        Grid.setCursor(current)
+      move(screen) {
+        const position = View.screenToGrid(screen)
+        Grid.setCursor(position)
       },
-      end(end) {},
+      end(screen) {},
     }
   }
 }
 
-export function rightClickStart(start, shiftKey) {}
+export function rightClickStart(screen, shiftKey) {
+  return Pan.start(screen)
+}
+
+export function scroll(delta) {
+  Pan.move(delta)
+}
+
+export function panChanged(panOffset) {
+  // console.log('panChanged', panOffset)
+  View.showPanOffset(panOffset)
+}
+
+//
+//
+//
 
 checkpoint()

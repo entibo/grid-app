@@ -28,21 +28,30 @@ const textarea = document.createElement('textarea')
 textarea.tabIndex = -1
 document.body.appendChild(textarea)
 
-textarea.addEventListener('focus', (e) => console.log('focus textarea'))
-textarea.addEventListener('blur', (e) => console.log('blur textarea'))
-
 export function setValue(value) {
   textarea.value = value
 }
 
 export function focus() {
-  textarea.focus({ preventScroll: true })
+  if (document.activeElement !== textarea) {
+    console.log('Textarea is not in focus')
+  }
+  console.log('Giving focus to textarea')
+  textarea.focus()
   textarea.select()
 }
 
 textarea.addEventListener('focus', () => {
   textarea.select()
 })
+
+textarea.addEventListener(
+  'blur',
+  (e) => {
+    console.log('Blur event on textarea')
+  },
+  true,
+)
 
 textarea.addEventListener('compositionstart', (e) => {
   compositionStateChange('start', e.data)

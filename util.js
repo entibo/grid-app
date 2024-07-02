@@ -53,3 +53,7 @@ export function filterMap(map, predicate) {
     Array.from(map).filter(([key, value]) => predicate(key, value)),
   )
 }
+
+export function lerp(a, b, t) {
+  return a * (1 - t) + b * t
+}

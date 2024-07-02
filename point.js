@@ -1,4 +1,9 @@
-export function add(a, b) {
+import * as Util from './util.js'
+
+export function add(a, b, ...rest) {
+  if (!a) return { x: 0, y: 0 }
+  if (!b) return a
+  if (rest.length) return add(add(a, b), ...rest)
   return { x: a.x + b.x, y: a.y + b.y }
 }
 
@@ -6,11 +11,15 @@ export function sub(a, b) {
   return { x: a.x - b.x, y: a.y - b.y }
 }
 
-export function scale(a, s) {
-  return { x: a.x * s, y: a.y * s }
+export function scale(point, scale) {
+  return { x: point.x * scale, y: point.y * scale }
 }
 
 export function equals(a, b) {
   if (!a || !b) return false
   return a.x === b.x && a.y === b.y
+}
+
+export function lerp(a, b, t) {
+  return { x: Util.lerp(a.x, b.x, t), y: Util.lerp(a.y, b.y, t) }
 }

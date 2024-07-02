@@ -1,10 +1,11 @@
 import { cellSize } from './global.js'
+import * as Point from './point.js'
 import { debounce } from './util.js'
 
-export function screenToGrid(e) {
+export function screenToGrid(screen) {
   const rect = $origin.getBoundingClientRect()
-  const x = Math.floor((e.clientX - rect.left) / cellSize)
-  const y = Math.floor((e.clientY - rect.top) / cellSize)
+  const x = Math.floor((screen.x - rect.left) / cellSize)
+  const y = Math.floor((screen.y - rect.top) / cellSize)
   return { x, y }
 }
 
@@ -13,57 +14,24 @@ $grid.className = 'grid'
 $grid.style.setProperty('--cell-size', `${cellSize}px`)
 document.body.appendChild($grid)
 
+const $gridBackground = document.createElement('div')
+$gridBackground.innerHTML = `<svg width="100%" height="100%">
+  <defs>
+    <pattern id="grid" width="${cellSize}" height="${cellSize}" patternUnits="userSpaceOnUse">
+      <path d="M ${cellSize} 0 L 0 0 0 ${cellSize}"
+            stroke="var(--grid-color)" 
+            stroke-width="1" 
+            fill="none"/>
+    </pattern>
+  </defs>
+  <rect width="100%" height="100%" fill="url(#grid)" />
+</svg>`
+$gridBackground.className = 'gridBackground'
+$grid.appendChild($gridBackground)
+
 const $origin = document.createElement('div')
 $origin.className = 'origin'
 $grid.appendChild($origin)
-
-{
-  const $padder = document.createElement('div')
-  $padder.className = ''
-  $grid.appendChild($padder)
-
-  const scrollPadding = {
-    left: 0,
-    top: 0,
-    right: 0,
-    bottom: 0,
-  }
-
-  function setPadding(amount) {
-    const diff = amount - scrollPadding.top
-    scrollPadding.top = amount
-    $grid.scrollTop += diff
-    $origin.style.paddingTop = `${scrollPadding.top}px`
-  }
-  const setPaddingDebounced = debounce(setPadding, 100)
-
-  const scrollPaddingIncrement = 400
-  $grid.addEventListener('scroll', () => {
-    const targetScrollPadingTop =
-      Math.max(
-        0,
-
-        Math.floor(
-          1 + (scrollPadding.top - $grid.scrollTop) / scrollPaddingIncrement,
-        ),
-      ) * scrollPaddingIncrement
-    console.log(
-      'grid.scrollTop:',
-      $grid.scrollTop,
-      'padding:',
-      scrollPadding.top,
-    )
-    console.log('targetScrollPadingTop:', targetScrollPadingTop)
-    if (targetScrollPadingTop !== scrollPadding.top) {
-      const diff = targetScrollPadingTop - scrollPadding.top
-      if (diff < 0) {
-        setPaddingDebounced(targetScrollPadingTop)
-      } else {
-        setPadding(targetScrollPadingTop)
-      }
-    }
-  })
-}
 
 const $cells = document.createElement('div')
 $cells.className = 'cells'
@@ -112,7 +80,11 @@ function hideElement($) {
 }
 
 function setPosition($, { x, y }) {
-  $.style.translate = `${x * cellSize}px ${y * cellSize}px`
+  $.style.translate = `${x}px ${y}px`
+}
+
+function setGridPosition($, point) {
+  setPosition($, Point.scale(point, cellSize))
 }
 
 function setDimensions($, { dx, dy }) {
@@ -122,12 +94,17 @@ function setDimensions($, { dx, dy }) {
 
 //
 
+export function showPanOffset({ x, y }) {
+  setPosition($gridBackground, { x: x % cellSize, y: y % cellSize })
+  setPosition($origin, { x, y })
+}
+
 export function cellCreated({ id, value, position }) {
   const $cell = document.createElement('div')
   $cell.className = 'cell'
   $cells.appendChild($cell)
 
-  setPosition($cell, position)
+  setGridPosition($cell, position)
   $cell.textContent = value
 
   cellIdToElementMap.set(id, $cell)
@@ -142,7 +119,7 @@ export function cellRestored({ id, value, position }) {
     $cells.appendChild($cell)
   }
 
-  setPosition($cell, position)
+  setGridPosition($cell, position)
   $cell.textContent = value
 }
 
@@ -153,7 +130,7 @@ export function cellUpdated({ id, value }) {
 
 export function cellMoved({ id, position }) {
   const $cell = cellIdToElementMap.get(id)
-  setPosition($cell, position)
+  setGridPosition($cell, position)
 }
 
 export function cellRemoved({ id }) {
@@ -168,7 +145,7 @@ export function cellRemoved({ id }) {
 
 export function showCursor(position) {
   showElement($cursor)
-  setPosition($cursor, position)
+  setGridPosition($cursor, position)
 }
 
 export function hideCursor() {
@@ -179,7 +156,7 @@ export function hideCursor() {
 
 export function showSelectionRange(range) {
   showElement($selectionRange)
-  setPosition($selectionRange, range)
+  setGridPosition($selectionRange, range)
   setDimensions($selectionRange, range)
 }
 
@@ -191,7 +168,7 @@ export function hideSelectionRange() {
 
 export function showDashedRange(range) {
   showElement($dashedRange)
-  setPosition($dashedRange, range)
+  setGridPosition($dashedRange, range)
   setDimensions($dashedRange, range)
 }
 
@@ -201,35 +178,35 @@ export function hideDashedRange() {
 
 //
 
-export function showInputRange() {
-  dom.inputRange.classList.add('composing')
+export function showInputRange({ x, y }) {
+  const range = { x, y, dx: 0, dy: 0 }
+  $inputRange.style.display = 'flex'
+  setGridPosition($inputRange, range)
+  setDimensions($inputRange, range)
 }
 
-export function updateInputRange(compositionText) {
-  for (const cell of dom.inputRange.children) {
+export function updateInputRange({ x, y }, compositionText) {
+  for (const cell of $inputRange.children) {
     hideElement(cell)
   }
   for (let i = 0; i < compositionText.length; i++) {
-    const cell = dom.inputRange.children[i]
+    const cell = $inputRange.children[i]
     cell.textContent = compositionText[i]
     cell.style.display = 'flex'
+    cell.style.position = 'relative'
   }
 
   const range = {
-    x: 0,
-    y: 0,
+    x,
+    y,
     dx: compositionText.length,
     dy: 0,
   }
-  showElement(dom.inputRange)
-  setPosition(dom.inputRange, range)
-  setDimensions(dom.inputRange, range)
+  $inputRange.style.display = 'flex'
+  setGridPosition($inputRange, range)
+  setDimensions($inputRange, range)
 }
 
 export function hideInputRange() {
-  dom.inputRange.classList.remove('composing')
-  for (const cell of dom.inputRange.children) {
-    hideElement(cell)
-  }
-  dom.inputRange.style.width = ''
+  hideElement($inputRange)
 }
