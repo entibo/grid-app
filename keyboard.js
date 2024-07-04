@@ -24,28 +24,28 @@ function doesCompleteCombo(key, comboKeys, delay = 200) {
     .every((k) => isKeyDown(k) && keyDownTime(k) < delay)
 }
 
-const textarea = document.createElement('textarea')
-textarea.tabIndex = -1
-document.body.appendChild(textarea)
+export const $textarea = document.createElement('textarea')
+$textarea.tabIndex = -1
+document.body.appendChild($textarea)
 
 export function setValue(value) {
-  textarea.value = value
+  $textarea.value = value
 }
 
 export function focus() {
-  if (document.activeElement !== textarea) {
-    console.log('Textarea is not in focus')
+  if (document.activeElement !== $textarea) {
+    // console.log('Textarea is not in focus')
   }
-  console.log('Giving focus to textarea')
-  textarea.focus()
-  textarea.select()
+  // console.log('Giving focus to textarea')
+  $textarea.focus()
+  $textarea.select()
 }
 
-textarea.addEventListener('focus', () => {
-  textarea.select()
+$textarea.addEventListener('focus', () => {
+  $textarea.select()
 })
 
-textarea.addEventListener(
+$textarea.addEventListener(
   'blur',
   (e) => {
     console.log('Blur event on textarea')
@@ -53,31 +53,33 @@ textarea.addEventListener(
   true,
 )
 
-textarea.addEventListener('compositionstart', (e) => {
+$textarea.addEventListener('compositionstart', (e) => {
   compositionStateChange('start', e.data)
 })
 
-textarea.addEventListener('compositionupdate', (e) => {
+$textarea.addEventListener('compositionupdate', (e) => {
   compositionStateChange('update', e.data)
 })
 
-textarea.addEventListener('compositionend', (e) => {
+$textarea.addEventListener('compositionend', (e) => {
   compositionStateChange('end', e.data)
 })
 
-textarea.addEventListener('input', (e) => {
-  console.log('input', e.data, e.inputType)
+$textarea.addEventListener('input', (e) => {
+  // console.log('input', e.data, e.inputType)
   if (e.isComposing) return
   if (e.inputType === 'deleteContentBackward') return
+  if (e.inputType === 'deleteContentForward') return
   if (e.inputType === 'insertLineBreak') return
   // if (e.inputType === 'insertCompositionText') return
   // if (e.inputType === 'insertFromPaste') return
+  if (e.data === null) return
 
   insertText(e.data, e.inputType)
   focus()
 })
 
-textarea.addEventListener('keydown', (e) => {
+$textarea.addEventListener('keydown', (e) => {
   console.log('keydown', e.key)
 
   if (e.ctrlKey && e.key.toLowerCase() === 'z') {

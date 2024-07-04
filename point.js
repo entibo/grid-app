@@ -12,7 +12,9 @@ export function sub(a, b) {
 }
 
 export function scale(point, scale) {
-  return { x: point.x * scale, y: point.y * scale }
+  if (typeof scale === 'number')
+    return { x: point.x * scale, y: point.y * scale }
+  return { x: point.x * scale.x, y: point.y * scale.y }
 }
 
 export function equals(a, b) {

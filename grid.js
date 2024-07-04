@@ -157,11 +157,12 @@ export function removeRange(range) {
   )
 
   removedCells.forEach(cellRemoved)
+  return removedCells.length
 }
 
 export function displaceRangeBy(range, offset) {
   const displacement = (() => {
-    if (offset.dx === -1) {
+    if (offset.x === -1) {
       return {
         range: {
           ...range,
@@ -169,12 +170,12 @@ export function displaceRangeBy(range, offset) {
           dx: 0,
         },
         offset: {
-          dx: range.dx + 1,
-          dy: 0,
+          x: range.dx + 1,
+          y: 0,
         },
       }
     }
-    if (offset.dx === 1) {
+    if (offset.x === 1) {
       return {
         range: {
           ...range,
@@ -182,12 +183,12 @@ export function displaceRangeBy(range, offset) {
           dx: 0,
         },
         offset: {
-          dx: -range.dx - 1,
-          dy: 0,
+          x: -range.dx - 1,
+          y: 0,
         },
       }
     }
-    if (offset.dy === -1) {
+    if (offset.y === -1) {
       return {
         range: {
           ...range,
@@ -195,12 +196,12 @@ export function displaceRangeBy(range, offset) {
           dy: 0,
         },
         offset: {
-          dx: 0,
-          dy: range.dy + 1,
+          x: 0,
+          y: range.dy + 1,
         },
       }
     }
-    if (offset.dy === 1) {
+    if (offset.y === 1) {
       return {
         range: {
           ...range,
@@ -208,11 +209,12 @@ export function displaceRangeBy(range, offset) {
           dy: 0,
         },
         offset: {
-          dx: 0,
-          dy: -range.dy - 1,
+          x: 0,
+          y: -range.dy - 1,
         },
       }
     }
+    throw 'error'
   })()
 
   function getNewPosition(point) {
@@ -257,7 +259,7 @@ export function moveRangeBy(range, offset, removeOverlap = true) {
   cells = cells.map((cell) => {
     if (!Range.contains(range, cell.position)) return cell
     const movedCell = { ...cell, position: Point.add(cell.position, offset) }
-    cellMoved(movedCell)
+    cellMoved(movedCell, cell)
     return movedCell
   })
 
@@ -268,20 +270,43 @@ export function moveRangeBy(range, offset, removeOverlap = true) {
 
 //
 
-export function insertText(text) {
-  const positionedValues = textToPositionedValues(text).map(
-    ({ position, value }) => ({
-      position: Point.add(position, grid.cursor),
-      value,
-    }),
-  )
+export function insertText(start, text, scale = 1) {
+  console.log('INSERT TEXT', start.x, start.y, text)
+
+  const positionedValues = scalePositionedValues(
+    textToPositionedValues(text),
+    scale,
+  ).map(({ position, value }) => ({
+    position: Point.add(position, start),
+    value,
+  }))
+
+  if (!positionedValues.length) return
   const bounds = Range.getBoundingRange(
     positionedValues.map(({ position }) => position),
   )
   writeRange(bounds, positionedValues)
+  return bounds
 }
 
 //
+
+function scalePositionedValues(positionedValues, scale) {
+  if (scale === 1) return positionedValues
+  return positionedValues.flatMap(({ position, value }) => {
+    const scaledPosition = Point.scale(position, scale)
+    const r = []
+    for (let i = 0; i < scale; i++) {
+      for (let j = 0; j < scale; j++) {
+        r.push({
+          value,
+          position: Point.add(scaledPosition, { x: i, y: j }),
+        })
+      }
+    }
+    return r
+  })
+}
 
 // Convert text to {position, value}
 function textToPositionedValues(text) {
@@ -290,7 +315,9 @@ function textToPositionedValues(text) {
   for (let y = 0; y < lines.length; y++) {
     const line = lines[y]
     for (let x = 0; x < line.length; x++) {
-      positionedValues.push({ position: { x, y }, value: line[x] })
+      const c = line[x]
+      if (c.match(/\s/)) continue
+      positionedValues.push({ position: { x, y }, value: c })
     }
   }
   return positionedValues

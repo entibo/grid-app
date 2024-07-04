@@ -6,55 +6,77 @@ const BUTTON_RIGHT = 2
 
 let left = null
 let right = null
+let buttonsState = 0
+let lastPosition = { x: 0, y: 0 }
+
+function startLeft(e) {
+  console.log('startLeft', e)
+  left = leftClickStart({ x: e.clientX, y: e.clientY }, e.shiftKey)
+}
+function startRight(e) {
+  console.log('startRight', e)
+  right = rightClickStart({ x: e.clientX, y: e.clientY }, e.shiftKey)
+}
+function stopLeft() {
+  left?.end?.(lastPosition)
+  left = null
+}
+function stopRight() {
+  right?.end?.(lastPosition)
+  right = null
+}
+
+//
+
+addEventListener('pointerdown', (e) => {
+  buttonsState = e.buttons
+  if (buttonsState & 1) startLeft(e)
+  if (buttonsState & 2) startRight(e)
+
+  const position = { x: e.clientX, y: e.clientY }
+  lastPosition = position
+})
+
+addEventListener('pointermove', (e) => {
+  if (!(buttonsState & 1) && e.buttons & 1) startLeft(e)
+  if (buttonsState & 1 && !(e.buttons & 1)) stopLeft()
+
+  if (!(buttonsState & 2) && e.buttons & 2) startRight(e)
+  if (buttonsState & 2 && !(e.buttons & 2)) stopRight()
+
+  buttonsState = e.buttons
+
+  const position = { x: e.clientX, y: e.clientY }
+  lastPosition = position
+
+  left?.move?.(position)
+  right?.move?.(position)
+})
+
+addEventListener('pointerup', () => {
+  stopLeft()
+  stopRight()
+})
+
+addEventListener('blur', () => {
+  stopLeft()
+  stopRight()
+})
+
+//
+
+addEventListener('contextmenu', (e) => {
+  e.preventDefault()
+})
 
 addEventListener('mousedown', (e) => {
+  console.log('mousedown', e.button, e.pointerType)
   // Prevents moving focus away from the textarea
   e.preventDefault()
   e.stopPropagation()
 })
 
-addEventListener('pointerdown', (e) => {
-  // console.log('pointerdown', e.button, e.pointerType)
-
-  if (e.pointerType === 'touch') return
-
-  const position = { x: e.clientX, y: e.clientY }
-  if (e.button === BUTTON_LEFT) {
-    left = leftClickStart(position, e.shiftKey)
-  }
-
-  if (e.button === BUTTON_RIGHT) {
-    right = rightClickStart(position, e.shiftKey)
-  }
-})
-
-addEventListener('pointermove', (e) => {
-  const position = { x: e.clientX, y: e.clientY }
-  left?.move?.(position)
-  right?.move?.(position)
-})
-
-addEventListener('blur', () => {
-  left = null
-  right = null
-})
-
-addEventListener('pointerup', (e) => {
-  // console.log('pointerup', e.button, e.pointerType)
-  const position = { x: e.clientX, y: e.clientY }
-  if (e.button === BUTTON_LEFT && left) {
-    left.end?.(position)
-    left = null
-  }
-  if (e.button === BUTTON_RIGHT && right) {
-    right.end?.(position)
-    right = null
-  }
-})
-
-addEventListener('contextmenu', (e) => {
-  e.preventDefault()
-})
+//
 
 addEventListener(
   'wheel',

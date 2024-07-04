@@ -1,12 +1,20 @@
-import { panChanged } from './index.js'
+import { panChanged, zoomChanged } from './index.js'
 import * as Point from './point.js'
 
 let targetPanOffset = null
 export let panOffset = { x: 0, y: 0 }
+export let zoomValue = 1
 
 export function move(delta) {
   targetPanOffset = Point.add(targetPanOffset || panOffset, delta)
   velocity = { x: 0, y: 0 }
+}
+
+export function zoom(deltaZoom) {
+  targetPanOffset = null
+
+  zoomValue = Math.max(0.1, Math.min(10, zoomValue * (1 + deltaZoom)))
+  zoomChanged(zoomValue)
 }
 
 function dampen(velocity, ms) {

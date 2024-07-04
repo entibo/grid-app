@@ -1,4 +1,5 @@
 import { cellSize } from './global.js'
+import { $textarea } from './keyboard.js'
 import * as Point from './point.js'
 import { debounce } from './util.js'
 
@@ -14,6 +15,10 @@ $grid.className = 'grid'
 $grid.style.setProperty('--cell-size', `${cellSize}px`)
 document.body.appendChild($grid)
 
+const $zoomBox = document.createElement('div')
+$zoomBox.className = 'zoomBox'
+$grid.appendChild($zoomBox)
+
 const $gridBackground = document.createElement('div')
 $gridBackground.innerHTML = `<svg width="100%" height="100%">
   <defs>
@@ -27,15 +32,19 @@ $gridBackground.innerHTML = `<svg width="100%" height="100%">
   <rect width="100%" height="100%" fill="url(#grid)" />
 </svg>`
 $gridBackground.className = 'gridBackground'
-$grid.appendChild($gridBackground)
+$zoomBox.appendChild($gridBackground)
 
 const $origin = document.createElement('div')
 $origin.className = 'origin'
-$grid.appendChild($origin)
+$zoomBox.appendChild($origin)
 
 const $cells = document.createElement('div')
 $cells.className = 'cells'
 $origin.appendChild($cells)
+
+const $largeCells = document.createElement('div')
+$largeCells.className = 'cells largeCells'
+$origin.appendChild($largeCells)
 
 const $cursor = document.createElement('div')
 $cursor.className = 'cursor'
@@ -52,11 +61,11 @@ $origin.appendChild($dashedRange)
 
 const $inputRange = document.createElement('div')
 $inputRange.className = 'range inputRange'
-for (let x = 0; x < 20; x++) {
+for (let x = 0; x < 30; x++) {
   $origin.appendChild($inputRange)
   // Fake cells to display user input
   const cell = document.createElement('div')
-  cell.className = 'cell'
+  cell.className = 'cell preview'
   cell.style.display = 'none'
   $inputRange.appendChild(cell)
 }
@@ -98,6 +107,12 @@ export function showPanOffset({ x, y }) {
   setPosition($gridBackground, { x: x % cellSize, y: y % cellSize })
   setPosition($origin, { x, y })
 }
+
+export function setZoom(zoom) {
+  $zoomBox.style.transform = `scale(${zoom})`
+}
+
+//
 
 export function cellCreated({ id, value, position }) {
   const $cell = document.createElement('div')
@@ -141,6 +156,18 @@ export function cellRemoved({ id }) {
 
 //
 
+export function displayLargeCells(scaledPositionedValues) {
+  $largeCells.innerHTML = ''
+  for (const { scale, position, value } of scaledPositionedValues) {
+    const $cell = document.createElement('div')
+    $cell.className = 'cell largeCell'
+    $cell.textContent = value
+    $largeCells.appendChild($cell)
+    setGridPosition($cell, position)
+    $cell.style.scale = scale
+  }
+}
+
 //
 
 export function showCursor(position) {
@@ -178,11 +205,16 @@ export function hideDashedRange() {
 
 //
 
-export function showInputRange({ x, y }) {
+export function showInputRange({ x, y }, scale) {
   const range = { x, y, dx: 0, dy: 0 }
   $inputRange.style.display = 'flex'
+  $inputRange.style.scale = scale
   setGridPosition($inputRange, range)
   setDimensions($inputRange, range)
+
+  // Move the text area so that IME can show up in the right place
+  const rect = $inputRange.getBoundingClientRect()
+  setPosition($textarea, rect)
 }
 
 export function updateInputRange({ x, y }, compositionText) {
@@ -199,7 +231,7 @@ export function updateInputRange({ x, y }, compositionText) {
   const range = {
     x,
     y,
-    dx: compositionText.length,
+    dx: compositionText.length - 1,
     dy: 0,
   }
   $inputRange.style.display = 'flex'
@@ -209,4 +241,5 @@ export function updateInputRange({ x, y }, compositionText) {
 
 export function hideInputRange() {
   hideElement($inputRange)
+  setDimensions($cursor, { dx: 0, dy: 0 })
 }

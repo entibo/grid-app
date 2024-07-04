@@ -24,6 +24,15 @@ export function contains(range, { x, y }) {
   )
 }
 
+export function overlaps(range1, range2) {
+  return (
+    range1.x <= range2.x + range2.dx &&
+    range1.x + range1.dx >= range2.x &&
+    range1.y <= range2.y + range2.dy &&
+    range1.y + range1.dy >= range2.y
+  )
+}
+
 export function getBoundingRange(points) {
   let x_min = Infinity
   let x_max = -Infinity
@@ -40,5 +49,84 @@ export function getBoundingRange(points) {
     y: y_min,
     dx: x_max - x_min,
     dy: y_max - y_min,
+  }
+}
+
+export const TOP_LEFT = 'top-left'
+export const TOP_RIGHT = 'top-right'
+export const BOTTOM_LEFT = 'bottom-left'
+export const BOTTOM_RIGHT = 'bottom-right'
+
+export function oppositeCorner(corner) {
+  switch (corner) {
+    case TOP_LEFT:
+      return BOTTOM_RIGHT
+    case TOP_RIGHT:
+      return BOTTOM_LEFT
+    case BOTTOM_LEFT:
+      return TOP_RIGHT
+    case BOTTOM_RIGHT:
+      return TOP_LEFT
+  }
+}
+
+export function getCorner(range, corner) {
+  switch (corner) {
+    case TOP_LEFT:
+      return topLeft(range)
+    case TOP_RIGHT:
+      return topRight(range)
+    case BOTTOM_LEFT:
+      return bottomLeft(range)
+    case BOTTOM_RIGHT:
+      return bottomRight(range)
+  }
+}
+
+export function topLeft(range) {
+  return { x: range.x, y: range.y }
+}
+
+export function bottomRight(range) {
+  return {
+    x: range.x + range.dx,
+    y: range.y + range.dy,
+  }
+}
+
+export function topRight(range) {
+  return {
+    x: range.x + range.dx,
+    y: range.y,
+  }
+}
+
+export function bottomLeft(range) {
+  return {
+    x: range.x,
+    y: range.y + range.dy,
+  }
+}
+
+export function center(range) {
+  return {
+    x: range.x + Math.round(range.dx / 2),
+    y: range.y + Math.round(range.dy / 2),
+  }
+}
+
+export function whichCornerIs(range, point) {
+  if (point.x <= range.x) {
+    if (point.y <= range.y) {
+      return TOP_LEFT
+    } else {
+      return BOTTOM_LEFT
+    }
+  } else {
+    if (point.y <= range.y) {
+      return TOP_RIGHT
+    } else {
+      return BOTTOM_RIGHT
+    }
   }
 }
