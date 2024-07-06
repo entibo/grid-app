@@ -46,6 +46,10 @@ textarea {
   height: calc(110% + var(--cell-size));
 }
 
+.zoomBox {
+  transform-origin: top left;
+}
+
 .origin {
   position: absolute;
 }

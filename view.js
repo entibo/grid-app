@@ -1,5 +1,6 @@
 import { cellSize } from './global.js'
 import { $textarea } from './keyboard.js'
+import { scaleValue } from './pan.js'
 import * as Point from './point.js'
 import { debounce } from './util.js'
 
@@ -7,7 +8,7 @@ export function screenToGrid(screen) {
   const rect = $origin.getBoundingClientRect()
   const x = Math.floor((screen.x - rect.left) / cellSize)
   const y = Math.floor((screen.y - rect.top) / cellSize)
-  return { x, y }
+  return Point.scale({ x, y }, 1 / scaleValue)
 }
 
 const $grid = document.createElement('div')

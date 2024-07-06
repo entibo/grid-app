@@ -353,13 +353,14 @@ export function leftClickStart(screen, shiftKey) {
   }
 }
 
-export function rightClickStart(screen, shiftKey) {
-  return Pan.start(screen)
+export function rightClickStart(screen, ctrlKey) {
+  if (ctrlKey) return Pan.startZooming(screen)
+  return Pan.startPanning(screen)
 }
 
 export function scroll(delta) {
-  Pan.zoom(delta.y / 1000)
-  // Pan.move(delta)
+  Pan.zoomBy(delta.y / 1000)
+  // Pan.panBy(delta)
 }
 
 export function zoomChanged(zoom) {

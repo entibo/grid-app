@@ -15,7 +15,7 @@ function startLeft(e) {
 }
 function startRight(e) {
   console.log('startRight', e)
-  right = rightClickStart({ x: e.clientX, y: e.clientY }, e.shiftKey)
+  right = rightClickStart({ x: e.clientX, y: e.clientY }, e.ctrlKey)
 }
 function stopLeft() {
   left?.end?.(lastPosition)
