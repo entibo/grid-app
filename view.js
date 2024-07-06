@@ -1,6 +1,5 @@
 import { cellSize } from './global.js'
 import { $textarea } from './keyboard.js'
-import { scaleValue } from './pan.js'
 import * as Point from './point.js'
 import { debounce } from './util.js'
 
@@ -8,7 +7,7 @@ export function screenToGrid(screen) {
   const rect = $origin.getBoundingClientRect()
   const x = Math.floor((screen.x - rect.left) / cellSize)
   const y = Math.floor((screen.y - rect.top) / cellSize)
-  return Point.scale({ x, y }, 1 / scaleValue)
+  return { x, y }
 }
 
 const $grid = document.createElement('div')
@@ -42,10 +41,6 @@ $zoomBox.appendChild($origin)
 const $cells = document.createElement('div')
 $cells.className = 'cells'
 $origin.appendChild($cells)
-
-const $largeCells = document.createElement('div')
-$largeCells.className = 'cells largeCells'
-$origin.appendChild($largeCells)
 
 const $cursor = document.createElement('div')
 $cursor.className = 'cursor'
@@ -105,12 +100,9 @@ function setDimensions($, { dx, dy }) {
 //
 
 export function showPanOffset({ x, y }) {
+  // console.log('setting origin transform,', x, y)
   setPosition($gridBackground, { x: x % cellSize, y: y % cellSize })
   setPosition($origin, { x, y })
-}
-
-export function setZoom(zoom) {
-  $zoomBox.style.transform = `scale(${zoom})`
 }
 
 //
@@ -153,20 +145,6 @@ export function cellRemoved({ id }) {
   const $cell = cellIdToElementMap.get(id)
   $cell.remove()
   // cellIdToElementMap.delete(id)
-}
-
-//
-
-export function displayLargeCells(scaledPositionedValues) {
-  $largeCells.innerHTML = ''
-  for (const { scale, position, value } of scaledPositionedValues) {
-    const $cell = document.createElement('div')
-    $cell.className = 'cell largeCell'
-    $cell.textContent = value
-    $largeCells.appendChild($cell)
-    setGridPosition($cell, position)
-    $cell.style.scale = scale
-  }
 }
 
 //

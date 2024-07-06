@@ -1,5 +1,5 @@
-import { listenToKeyStateChange } from './keyboard-global.js'
-import { leftClickStart, rightClickStart, scroll } from './index.js'
+import { leftClickStart, rightClickStart } from './index.js'
+import { signal } from './signal.js'
 
 const BUTTON_LEFT = 0
 const BUTTON_RIGHT = 2
@@ -78,12 +78,11 @@ addEventListener('mousedown', (e) => {
 
 //
 
-addEventListener(
-  'wheel',
-  (e) => {
-    if (e.ctrlKey) return
-    e.preventDefault()
-    scroll({ x: -e.deltaX, y: -e.deltaY })
-  },
-  { passive: false },
-)
+export const onScroll = signal()
+
+addEventListener('wheel', (e) => {
+  if (e.ctrlKey) return
+  onScroll.emit({ x: -e.deltaX, y: -e.deltaY })
+  // Swiping left can be interpreted as "back"
+  e.preventDefault()
+})

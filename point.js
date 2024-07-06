@@ -25,3 +25,7 @@ export function equals(a, b) {
 export function lerp(a, b, t) {
   return { x: Util.lerp(a.x, b.x, t), y: Util.lerp(a.y, b.y, t) }
 }
+
+export function round(point) {
+  return { x: Math.round(point.x), y: Math.round(point.y) }
+}

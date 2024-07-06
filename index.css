@@ -69,14 +69,6 @@ textarea {
   text-transform: full-width;
 }
 
-.largeCell {
-  /* top: 0.5px;
-  left: 0.5px; */
-  transform-origin: top left;
-  background: var(--bg-color);
-  outline: 1px solid black;
-}
-
 .cell.preview {
   background: var(--grid-color);
 }

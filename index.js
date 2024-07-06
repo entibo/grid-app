@@ -1,13 +1,14 @@
+import * as BrowserZoom from './browser-zoom.js'
 import * as Grid from './grid.js'
 import { grid } from './grid.js'
 import * as History from './history.js'
 import * as Keyboard from './keyboard.js'
 import * as Mouse from './mouse.js'
-import * as View from './view.js'
+import * as Pan from './pan.js'
 import * as Point from './point.js'
 import * as Range from './range.js'
-import * as Pan from './pan.js'
 import { debounce } from './util.js'
+import * as View from './view.js'
 
 function restoreGrid(grid) {
   console.log('restoreGrid', grid)
@@ -32,70 +33,7 @@ function restoreGrid(grid) {
 
 var gridChanged = debounce(function () {
   console.log('grid changeded')
-
-  const largeCells = Grid.getCells().reduce((scaledPositionedValues, cell) => {
-    const scale = findLargestSquareWithSameValue(cell.position, cell.value)
-    if (scale < 2) return scaledPositionedValues
-
-    scaledPositionedValues.push({
-      scale,
-      position: cell.position,
-      value: cell.value,
-      range: { ...cell.position, dx: scale - 1, dy: scale - 1 },
-    })
-
-    return scaledPositionedValues
-  }, [])
-
-  const largeCellsNoContain = largeCells.filter((candidate) => {
-    const { scale, value, range } = candidate
-    return !largeCells.some(
-      (other) =>
-        other !== candidate &&
-        other.value === value &&
-        other.scale > scale &&
-        Range.overlaps(other.range, range),
-    )
-  })
-
-  const largeCellsNoOverlap = []
-  for (const candidate of largeCellsNoContain) {
-    const { value, range } = candidate
-    const overlaps = largeCellsNoOverlap.some(
-      (other) =>
-        other !== candidate &&
-        other.value === value &&
-        Range.overlaps(other.range, range),
-    )
-    if (overlaps) continue
-    largeCellsNoOverlap.push(candidate)
-  }
-
-  View.displayLargeCells(largeCellsNoOverlap)
 }, 10)
-
-function findLargestSquareWithSameValue({ x, y }, initialValue) {
-  // const initialValue = Grid.getCellAt({ x, y })?.value
-  // if (!initialValue) return { scale: 0 }
-
-  let scale = 1
-
-  // Helper function to check if a specific cell has the initial value
-  function isSameValue(x, y) {
-    return Grid.getCellAt({ x, y })?.value === initialValue
-  }
-
-  // Main loop to progressively expand the square
-  while (true) {
-    // Check the new row and column for the expanded square
-    for (let i = 0; i <= scale; i++) {
-      if (!isSameValue(x + scale, y + i) || !isSameValue(x + i, y + scale)) {
-        return scale // Return the scale of the largest valid square
-      }
-    }
-    scale++
-  }
-}
 
 export function cellCreated(cell) {
   gridChanged()
@@ -354,18 +292,16 @@ export function leftClickStart(screen, shiftKey) {
 }
 
 export function rightClickStart(screen, ctrlKey) {
-  if (ctrlKey) return Pan.startZooming(screen)
   return Pan.startPanning(screen)
 }
 
-export function scroll(delta) {
-  Pan.zoomBy(delta.y / 1000)
-  // Pan.panBy(delta)
-}
+Mouse.onScroll((offset) => {
+  Pan.panBy(offset, true)
+})
 
-export function zoomChanged(zoom) {
-  View.setZoom(zoom)
-}
+BrowserZoom.onZoom((offset) => {
+  Pan.panBy(offset, false)
+})
 
 export function panChanged(panOffset) {
   // console.log('panChanged', panOffset)
