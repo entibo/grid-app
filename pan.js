@@ -15,7 +15,7 @@ export function panBy(delta, transition = false) {
 }
 
 export function setPanOffset(point) {
-  console.log('setPanOffset', panOffset, point)
+  // console.log('setPanOffset', panOffset, point)
   panOffset = point
   panChanged(point)
 }

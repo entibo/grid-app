@@ -33,16 +33,17 @@ export function overlaps(range1, range2) {
   )
 }
 
-export function getBoundingRange(points) {
+export function getBoundingRange(pointsAndRanges) {
   let x_min = Infinity
   let x_max = -Infinity
   let y_min = Infinity
   let y_max = -Infinity
-  for (const { x, y } of points) {
-    x_min = Math.min(x_min, x)
-    x_max = Math.max(x_max, x)
-    y_min = Math.min(y_min, y)
-    y_max = Math.max(y_max, y)
+  for (const o of pointsAndRanges) {
+    const isRange = typeof o.dx === 'number'
+    x_min = Math.min(x_min, o.x)
+    y_min = Math.min(y_min, o.y)
+    x_max = Math.max(x_max, isRange ? o.x + o.dx : o.x)
+    y_max = Math.max(y_max, isRange ? o.y + o.dy : o.y)
   }
   return {
     x: x_min,

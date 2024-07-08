@@ -22,17 +22,34 @@ $grid.appendChild($zoomBox)
 const $gridBackground = document.createElement('div')
 $gridBackground.innerHTML = `<svg width="100%" height="100%">
   <defs>
-    <pattern id="grid" width="${cellSize}" height="${cellSize}" patternUnits="userSpaceOnUse">
+    <pattern id="gridPattern" width="${cellSize}" height="${cellSize}" patternUnits="userSpaceOnUse">
       <path d="M ${cellSize} 0 L 0 0 0 ${cellSize}"
             stroke="var(--grid-color)" 
             stroke-width="1" 
             fill="none"/>
     </pattern>
   </defs>
-  <rect width="100%" height="100%" fill="url(#grid)" />
-</svg>`
+  <rect width="100%" height="100%" fill="url(#gridPattern)" />
+  </svg>`
+const $gridSVGPattern = $gridBackground.querySelector('pattern')
+// onPanChanged(({ x, y }) => {
+//   $gridSVGPattern.setAttribute(
+//     'patternTransform',
+//     `translate(${x % cellSize} ${y % cellSize})`,
+//   )
+// })
 $gridBackground.className = 'gridBackground'
 $zoomBox.appendChild($gridBackground)
+
+const $fakeScrollBox = document.createElement('div')
+// onPanChanged(({ x, y }) => {
+//   $gridSVGPattern.setAttribute(
+//     'patternTransform',
+//     `translate(${x % cellSize} ${y % cellSize})`,
+//   )
+// })
+$fakeScrollBox.className = 'fakeScrollBox'
+$zoomBox.appendChild($fakeScrollBox)
 
 const $origin = document.createElement('div')
 $origin.className = 'origin'
@@ -100,7 +117,14 @@ function setDimensions($, { dx, dy }) {
 //
 
 export function showPanOffset({ x, y }) {
+  console.log({
+    x: -x,
+    y: -y,
+    width: $grid.clientWidth,
+    height: $grid.clientHeight,
+  })
   // console.log('setting origin transform,', x, y)
+
   setPosition($gridBackground, { x: x % cellSize, y: y % cellSize })
   setPosition($origin, { x, y })
 }

@@ -10,6 +10,7 @@ html,
 body {
   margin: 0;
   padding: 0;
+  overflow: hidden;
 }
 
 /* Invisible element used for capturing keyboard input */
@@ -26,11 +27,11 @@ textarea {
 }
 
 .grid {
+  overflow: auto;
   background: var(--bg-color);
   position: relative;
   width: 100dvw;
   height: 100dvh;
-  overflow: hidden;
   user-select: none;
   -webkit-user-select: none;
   overscroll-behavior: contain;
@@ -38,16 +39,18 @@ textarea {
   --grid-color: rgb(216, 207, 204);
 }
 
-.gridBackground {
+.zoomBox {
   position: absolute;
+  inset: 0px;
+}
+
+.gridBackground {
+  position: fixed;
+  pointer-events: none;
   top: calc(-1 * var(--cell-size));
   left: calc(-1 * var(--cell-size));
   width: calc(110% + var(--cell-size));
   height: calc(110% + var(--cell-size));
-}
-
-.zoomBox {
-  transform-origin: top left;
 }
 
 .origin {
@@ -96,24 +99,4 @@ textarea {
   top: 0;
   left: 0;
   outline: 2px dashed blueviolet;
-}
-
-.inputRange {
-  transform-origin: top left;
-}
-
-.cursor .inputRange.composing {
-  animation: pulsate 1s infinite;
-}
-
-@keyframes pulsate {
-  0% {
-    outline-color: rgba(0, 0, 0, 0.7);
-  }
-  50% {
-    outline-color: rgba(0, 0, 0, 0.2);
-  }
-  100% {
-    outline-color: rgba(0, 0, 0, 0.7);
-  }
 }

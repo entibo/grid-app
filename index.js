@@ -33,6 +33,9 @@ function restoreGrid(grid) {
 
 var gridChanged = debounce(function () {
   console.log('grid changeded')
+  console.log(
+    Range.getBoundingRange(Grid.getCells().map((cell) => cell.position)),
+  )
 }, 10)
 
 export function cellCreated(cell) {
@@ -296,7 +299,7 @@ export function rightClickStart(screen, ctrlKey) {
 }
 
 Mouse.onScroll((offset) => {
-  Pan.panBy(offset, true)
+  // Pan.panBy(offset, true)
 })
 
 BrowserZoom.onZoom((offset) => {
@@ -307,6 +310,21 @@ export function panChanged(panOffset) {
   // console.log('panChanged', panOffset)
   View.showPanOffset(panOffset)
 }
+
+//
+
+import * as Scrollbars from './scrollbars.js'
+
+Scrollbars.onScroll(({ x, y }) => {
+  Pan.setPanOffset({ x: -x, y: -y })
+})
+
+onPan((panOffset) => {
+  Scrollbars.setViewRect({ x: 0, y: 0, width: 0, height: 0 })
+})
+addEventListener("resize", () => {
+  
+})
 
 //
 //
