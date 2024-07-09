@@ -2,34 +2,34 @@ export function fromPoints({ x: x1, y: y1 }, { x: x2, y: y2 }) {
   return {
     x: Math.min(x1, x2),
     y: Math.min(y1, y2),
-    dx: Math.abs(x1 - x2),
-    dy: Math.abs(y1 - y2),
+    width: Math.abs(x1 - x2),
+    height: Math.abs(y1 - y2),
   }
 }
 
-export function move(range, offset) {
+export function moveBy(range, { x, y }) {
   return {
     ...range,
-    x: range.x + offset.x,
-    y: range.y + offset.y,
+    x: range.x + x,
+    y: range.y + y,
   }
 }
 
 export function contains(range, { x, y }) {
   return (
     x >= range.x &&
-    x <= range.x + range.dx &&
+    x <= range.x + range.width &&
     y >= range.y &&
-    y <= range.y + range.dy
+    y <= range.y + range.height
   )
 }
 
 export function overlaps(range1, range2) {
   return (
-    range1.x <= range2.x + range2.dx &&
-    range1.x + range1.dx >= range2.x &&
-    range1.y <= range2.y + range2.dy &&
-    range1.y + range1.dy >= range2.y
+    range1.x <= range2.x + range2.width &&
+    range1.x + range1.width >= range2.x &&
+    range1.y <= range2.y + range2.height &&
+    range1.y + range1.height >= range2.y
   )
 }
 
@@ -39,17 +39,17 @@ export function getBoundingRange(pointsAndRanges) {
   let y_min = Infinity
   let y_max = -Infinity
   for (const o of pointsAndRanges) {
-    const isRange = typeof o.dx === 'number'
+    const isRange = typeof o.width === 'number'
     x_min = Math.min(x_min, o.x)
     y_min = Math.min(y_min, o.y)
-    x_max = Math.max(x_max, isRange ? o.x + o.dx : o.x)
-    y_max = Math.max(y_max, isRange ? o.y + o.dy : o.y)
+    x_max = Math.max(x_max, isRange ? o.x + o.width : o.x)
+    y_max = Math.max(y_max, isRange ? o.y + o.height : o.y)
   }
   return {
     x: x_min,
     y: y_min,
-    dx: x_max - x_min,
-    dy: y_max - y_min,
+    width: x_max - x_min,
+    height: y_max - y_min,
   }
 }
 
@@ -90,14 +90,14 @@ export function topLeft(range) {
 
 export function bottomRight(range) {
   return {
-    x: range.x + range.dx,
-    y: range.y + range.dy,
+    x: range.x + range.width,
+    y: range.y + range.height,
   }
 }
 
 export function topRight(range) {
   return {
-    x: range.x + range.dx,
+    x: range.x + range.width,
     y: range.y,
   }
 }
@@ -105,14 +105,14 @@ export function topRight(range) {
 export function bottomLeft(range) {
   return {
     x: range.x,
-    y: range.y + range.dy,
+    y: range.y + range.height,
   }
 }
 
 export function center(range) {
   return {
-    x: range.x + Math.round(range.dx / 2),
-    y: range.y + Math.round(range.dy / 2),
+    x: range.x + Math.round(range.width / 2),
+    y: range.y + Math.round(range.height / 2),
   }
 }
 

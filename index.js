@@ -9,6 +9,8 @@ import * as Point from './point.js'
 import * as Range from './range.js'
 import { debounce } from './util.js'
 import * as View from './view.js'
+import { cellSize } from './global.js'
+import * as Scrollbars from './scrollbars.js'
 
 function restoreGrid(grid) {
   console.log('restoreGrid', grid)
@@ -150,10 +152,9 @@ export function clearSelection() {
 
 export function compositionStateChange(compositionState, compositionText) {
   const selectionRange = Grid.getSelectionRange()
-  const scale = Math.min(selectionRange.dx, selectionRange.dy) + 1
 
   if (compositionState === 'start') {
-    View.showInputRange(selectionRange, scale)
+    View.showInputRange(selectionRange)
     View.hideCursor()
     View.hideSelectionRange()
 
@@ -180,55 +181,23 @@ export function insertText(text, type) {
   console.log('insertText', text, type)
 
   const selectionRange = Grid.getSelectionRange()
-  const cursorCorner = Range.whichCornerIs(selectionRange, grid.cursor)
-  const scale = Math.min(selectionRange.dx, selectionRange.dy) + 1
 
   const removed = Grid.removeRange(selectionRange)
 
-  const bounds = Grid.insertText(selectionRange, text, scale)
+  const bounds = Grid.insertText(selectionRange, text)
 
   if (bounds) {
-    const newSelectionRange = {
-      x: bounds.x + bounds.dx + 1,
-      y: bounds.y,
-      dx: scale - 1,
-      dy: scale - 1,
-    }
-    Grid.setCursorAndSelectionStart(
-      Range.getCorner(newSelectionRange, cursorCorner),
-      Range.getCorner(newSelectionRange, Range.oppositeCorner(cursorCorner)),
-    )
+    Grid.setCursorAndSelectionStart({
+      x: bounds.x + bounds.width + 1,
+      y: bounds.y + bounds.height,
+    })
   }
 
-  // Grid.setCursorAndSelectionStart({
-  //   x: bounds.x + bounds.dx + 1,
-  //   y: bounds.y + bounds.dy,
-  // })
   if (removed || bounds) checkpoint()
 }
 
 export function moveCursor(offset) {
-  const selectionRange = Grid.getSelectionRange()
-  const cursorCorner = Range.whichCornerIs(selectionRange, grid.cursor)
-  const scale = Math.min(selectionRange.dx, selectionRange.dy) + 1
-
-  const newSelectionRange = {
-    ...selectionRange,
-    dx: scale - 1,
-    dy: scale - 1,
-  }
-
-  console.log(newSelectionRange, scale, offset)
-
-  if (offset.x > 0) newSelectionRange.x += selectionRange.dx + 1
-  if (offset.y > 0) newSelectionRange.y += selectionRange.dy + 1
-  if (offset.x < 0) newSelectionRange.x -= scale
-  if (offset.y < 0) newSelectionRange.y -= scale
-
-  Grid.setCursorAndSelectionStart(
-    Range.getCorner(newSelectionRange, cursorCorner),
-    Range.getCorner(newSelectionRange, Range.oppositeCorner(cursorCorner)),
-  )
+  Grid.setCursorAndSelectionStart(Point.add(grid.cursor, offset))
 }
 
 export function moveCursorAndSelect(offset) {
@@ -267,7 +236,7 @@ export function leftClickStart(screen, shiftKey) {
       move(screen) {
         const current = View.screenToGrid(screen)
         const offset = Point.sub(current, start)
-        View.showDashedRange(Range.move(selectionRange, offset))
+        View.showDashedRange(Range.moveBy(selectionRange, offset))
       },
       end(screen) {
         const position = View.screenToGrid(screen)
@@ -306,25 +275,44 @@ BrowserZoom.onZoom((offset) => {
   Pan.panBy(offset, false)
 })
 
+// TODO: IMPORTANT: cache this or something
+function getGridContentRange() {
+  const range = Range.getBoundingRange(
+    Grid.getCells().map((cell) => Point.scale(cell.position, cellSize)),
+  )
+  range.width += cellSize
+  range.height += cellSize
+  return range
+}
+
+const debouncedUpdateScrollbars = debounce(Scrollbars.update, 100)
+
 export function panChanged(panOffset) {
   // console.log('panChanged', panOffset)
   View.showPanOffset(panOffset)
+
+  //
+
+  if (window.foo) return
+  const contentRange = getGridContentRange()
+  Scrollbars.update(contentRange, {
+    x: -panOffset.x,
+    y: -panOffset.y,
+  })
 }
 
 //
 
-import * as Scrollbars from './scrollbars.js'
+Scrollbars.mount(View.$grid)
 
 Scrollbars.onScroll(({ x, y }) => {
   Pan.setPanOffset({ x: -x, y: -y })
 })
 
-onPan((panOffset) => {
-  Scrollbars.setViewRect({ x: 0, y: 0, width: 0, height: 0 })
-})
-addEventListener("resize", () => {
-  
-})
+//   when pan changes
+// X when resized (handled by scrollbars module itself)
+//   when content range changes!!!!!!!!!!!!!!!!!!!!!!!!!
+Scrollbars.update
 
 //
 //

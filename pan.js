@@ -3,7 +3,6 @@ import * as Point from './point.js'
 
 let targetPanOffset = null
 export let panOffset = { x: 0, y: 0 }
-export let scaleValue = 1
 
 export function panBy(delta, transition = false) {
   if (transition) {
@@ -61,13 +60,9 @@ export function startPanning(startScreenPosition) {
   return {
     move(screenPosition) {
       const screenDistanceStart = Point.sub(screenPosition, startScreenPosition)
-      const scaledDistanceStart = Point.scale(
-        screenDistanceStart,
-        1 / scaleValue,
-      )
 
       // console.log('move dsitance:', screenPosition)
-      setPanOffset(Point.add(panOffsetStart, scaledDistanceStart))
+      setPanOffset(Point.add(panOffsetStart, screenDistanceStart))
 
       const time = performance.now()
       const ms = Math.max(1, time - previousTime)

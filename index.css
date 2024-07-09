@@ -27,7 +27,7 @@ textarea {
 }
 
 .grid {
-  overflow: auto;
+  overflow: hidden;
   background: var(--bg-color);
   position: relative;
   width: 100dvw;
@@ -41,7 +41,12 @@ textarea {
 
 .zoomBox {
   position: absolute;
-  inset: 0px;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: scroll;
+  /* inset: 0px; */
 }
 
 .gridBackground {
@@ -51,6 +56,12 @@ textarea {
   left: calc(-1 * var(--cell-size));
   width: calc(110% + var(--cell-size));
   height: calc(110% + var(--cell-size));
+}
+
+.scrollBox {
+  position: absolute;
+  inset: 0px;
+  overflow: auto;
 }
 
 .origin {

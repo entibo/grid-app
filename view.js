@@ -10,14 +10,10 @@ export function screenToGrid(screen) {
   return { x, y }
 }
 
-const $grid = document.createElement('div')
+export const $grid = document.createElement('div')
 $grid.className = 'grid'
 $grid.style.setProperty('--cell-size', `${cellSize}px`)
 document.body.appendChild($grid)
-
-const $zoomBox = document.createElement('div')
-$zoomBox.className = 'zoomBox'
-$grid.appendChild($zoomBox)
 
 const $gridBackground = document.createElement('div')
 $gridBackground.innerHTML = `<svg width="100%" height="100%">
@@ -39,21 +35,11 @@ const $gridSVGPattern = $gridBackground.querySelector('pattern')
 //   )
 // })
 $gridBackground.className = 'gridBackground'
-$zoomBox.appendChild($gridBackground)
-
-const $fakeScrollBox = document.createElement('div')
-// onPanChanged(({ x, y }) => {
-//   $gridSVGPattern.setAttribute(
-//     'patternTransform',
-//     `translate(${x % cellSize} ${y % cellSize})`,
-//   )
-// })
-$fakeScrollBox.className = 'fakeScrollBox'
-$zoomBox.appendChild($fakeScrollBox)
+$grid.appendChild($gridBackground)
 
 const $origin = document.createElement('div')
 $origin.className = 'origin'
-$zoomBox.appendChild($origin)
+$grid.appendChild($origin)
 
 const $cells = document.createElement('div')
 $cells.className = 'cells'
@@ -109,20 +95,20 @@ function setGridPosition($, point) {
   setPosition($, Point.scale(point, cellSize))
 }
 
-function setDimensions($, { dx, dy }) {
-  $.style.width = `${(dx + 1) * cellSize}px`
-  $.style.height = `${(dy + 1) * cellSize}px`
+function setDimensions($, { width, height }) {
+  $.style.width = `${(width + 1) * cellSize}px`
+  $.style.height = `${(height + 1) * cellSize}px`
 }
 
 //
 
 export function showPanOffset({ x, y }) {
-  console.log({
-    x: -x,
-    y: -y,
-    width: $grid.clientWidth,
-    height: $grid.clientHeight,
-  })
+  // console.log({
+  //   x: -x,
+  //   y: -y,
+  //   width: $grid.clientWidth,
+  //   height: $grid.clientHeight,
+  // })
   // console.log('setting origin transform,', x, y)
 
   setPosition($gridBackground, { x: x % cellSize, y: y % cellSize })
@@ -208,10 +194,9 @@ export function hideDashedRange() {
 
 //
 
-export function showInputRange({ x, y }, scale) {
-  const range = { x, y, dx: 0, dy: 0 }
+export function showInputRange({ x, y }) {
+  const range = { x, y, width: 0, height: 0 }
   $inputRange.style.display = 'flex'
-  $inputRange.style.scale = scale
   setGridPosition($inputRange, range)
   setDimensions($inputRange, range)
 
@@ -234,8 +219,8 @@ export function updateInputRange({ x, y }, compositionText) {
   const range = {
     x,
     y,
-    dx: compositionText.length - 1,
-    dy: 0,
+    width: compositionText.length - 1,
+    height: 0,
   }
   $inputRange.style.display = 'flex'
   setGridPosition($inputRange, range)
@@ -244,5 +229,5 @@ export function updateInputRange({ x, y }, compositionText) {
 
 export function hideInputRange() {
   hideElement($inputRange)
-  setDimensions($cursor, { dx: 0, dy: 0 })
+  setDimensions($cursor, { width: 0, height: 0 })
 }

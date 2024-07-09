@@ -167,10 +167,10 @@ export function displaceRangeBy(range, offset) {
         range: {
           ...range,
           x: range.x - 1,
-          dx: 0,
+          width: 0,
         },
         offset: {
-          x: range.dx + 1,
+          x: range.width + 1,
           y: 0,
         },
       }
@@ -179,11 +179,11 @@ export function displaceRangeBy(range, offset) {
       return {
         range: {
           ...range,
-          x: range.x + range.dx + 1,
-          dx: 0,
+          x: range.x + range.width + 1,
+          width: 0,
         },
         offset: {
-          x: -range.dx - 1,
+          x: -range.width - 1,
           y: 0,
         },
       }
@@ -193,11 +193,11 @@ export function displaceRangeBy(range, offset) {
         range: {
           ...range,
           y: range.y - 1,
-          dy: 0,
+          height: 0,
         },
         offset: {
           x: 0,
-          y: range.dy + 1,
+          y: range.height + 1,
         },
       }
     }
@@ -205,12 +205,12 @@ export function displaceRangeBy(range, offset) {
       return {
         range: {
           ...range,
-          y: range.y + range.dy + 1,
-          dy: 0,
+          y: range.y + range.height + 1,
+          height: 0,
         },
         offset: {
           x: 0,
-          y: -range.dy - 1,
+          y: -range.height - 1,
         },
       }
     }
@@ -245,7 +245,7 @@ export function moveRangeBy(range, offset, removeOverlap = true) {
   let cells = getCells()
 
   if (removeOverlap) {
-    const targetRange = Range.move(range, offset)
+    const targetRange = Range.moveBy(range, offset)
     const [removedCells, remainingCells] = partition(
       cells,
       (cell) =>
@@ -270,16 +270,15 @@ export function moveRangeBy(range, offset, removeOverlap = true) {
 
 //
 
-export function insertText(start, text, scale = 1) {
+export function insertText(start, text) {
   console.log('INSERT TEXT', start.x, start.y, text)
 
-  const positionedValues = scalePositionedValues(
-    textToPositionedValues(text),
-    scale,
-  ).map(({ position, value }) => ({
-    position: Point.add(position, start),
-    value,
-  }))
+  const positionedValues = textToPositionedValues(text).map(
+    ({ position, value }) => ({
+      position: Point.add(position, start),
+      value,
+    }),
+  )
 
   if (!positionedValues.length) return
   const bounds = Range.getBoundingRange(
@@ -287,25 +286,6 @@ export function insertText(start, text, scale = 1) {
   )
   writeRange(bounds, positionedValues)
   return bounds
-}
-
-//
-
-function scalePositionedValues(positionedValues, scale) {
-  if (scale === 1) return positionedValues
-  return positionedValues.flatMap(({ position, value }) => {
-    const scaledPosition = Point.scale(position, scale)
-    const r = []
-    for (let i = 0; i < scale; i++) {
-      for (let j = 0; j < scale; j++) {
-        r.push({
-          value,
-          position: Point.add(scaledPosition, { x: i, y: j }),
-        })
-      }
-    }
-    return r
-  })
 }
 
 // Convert text to {position, value}
@@ -333,9 +313,9 @@ function positionedValuesToText(positionedValues) {
     positionedValues.map(({ position }) => position),
   )
   const lines = []
-  for (let y = bounds.y; y < bounds.y + bounds.dy + 1; y++) {
+  for (let y = bounds.y; y < bounds.y + bounds.height + 1; y++) {
     const line = []
-    for (let x = bounds.x; x < bounds.x + bounds.dx + 1; x++) {
+    for (let x = bounds.x; x < bounds.x + bounds.width + 1; x++) {
       const cell = positionedValues.find(
         ({ position: { x: px, y: py } }) => x === px && y === py,
       )
