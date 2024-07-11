@@ -19,6 +19,7 @@ export function push(value) {
   }
   stack.push(value)
   index = lastIndex()
+  console.log('pushed!', stack, index)
 }
 
 export function undo() {
@@ -27,6 +28,6 @@ export function undo() {
 }
 
 export function redo() {
-  if (!canUndo()) return
+  if (!canRedo()) return
   return stack[++index]
 }

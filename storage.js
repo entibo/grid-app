@@ -78,15 +78,23 @@ function decode(compressedBase64String) {
   })
 }
 
+//
+
 export async function writeHash(value) {
-  console.log('writeHash', JSON.stringify(value))
   window.location.hash = value ? await encode(value) : ''
 }
 
 export async function readHash() {
   const hash = window.location.hash.slice(1)
-  return hash ? decode(hash) : ''
+  try {
+    return decode(hash)
+  } catch (err) {
+    console.error('Error decoding grid text from URL hash:', err)
+  }
+  return ''
 }
+
+//
 
 export function writeLocalStorage(key, value) {
   localStorage.setItem(key, JSON.stringify(value))

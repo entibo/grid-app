@@ -1,6 +1,5 @@
 import * as BrowserZoom from './browser-zoom.js'
 import * as Grid from './grid.js'
-import { grid } from './grid.js'
 import * as History from './history.js'
 import * as Keyboard from './keyboard.js'
 import * as Mouse from './mouse.js'
@@ -11,100 +10,63 @@ import { debounce } from './util.js'
 import * as View from './view.js'
 import { cellSize } from './global.js'
 import * as Scrollbars from './scrollbars.js'
+import { signal, computed } from './signal.js'
+import { readHash, writeHash } from './storage.js'
 
-function restoreGrid(grid) {
-  console.log('restoreGrid', grid)
-
-  const oldCellIds = new Set(Grid.getCells().map((cell) => cell.id))
-
-  Grid.setGrid(grid)
-
-  for (const cell of Grid.getCells()) {
-    View.cellRestored(cell)
-    oldCellIds.delete(cell.id)
-  }
-
-  for (const id of oldCellIds) {
-    View.cellRemoved({ id })
-  }
-
-  cursorChanged(grid.cursor)
-  selectionChanged(Grid.getSelectionRange())
-  gridChanged()
-}
-
-var gridChanged = debounce(function () {
-  console.log('grid changeded')
-  console.log(
-    Range.getBoundingRange(Grid.getCells().map((cell) => cell.position)),
-  )
-}, 10)
-
-export function cellCreated(cell) {
-  gridChanged()
-  View.cellCreated(cell)
-}
-export function cellUpdated(cell) {
-  gridChanged()
-  View.cellUpdated(cell)
-}
-export function cellMoved(cell, previousCell) {
-  gridChanged()
-  gridChanged()
-  View.cellMoved(cell)
-}
-export function cellRemoved(cell) {
-  gridChanged()
-  View.cellRemoved(cell)
-}
-
-export function cursorChanged(cursor) {
-  if (!cursor) {
-    View.hideCursor()
-    return
-  }
-  View.showCursor(cursor)
+Grid.$selection.subscribe(({ end }) => {
+  View.showCursor(end)
   Keyboard.focus()
-}
-export function selectionChanged(selectionRange) {
-  if (!selectionRange) {
-    View.hideSelectionRange()
-    return
-  }
+})
+
+Grid.$selectionRange.subscribe((selectionRange) => {
   View.showSelectionRange(selectionRange)
+
   const text = Grid.readRange(selectionRange)
   Keyboard.setValue(text)
   Keyboard.focus()
-}
+})
 
 //
 
+const save = debounce(() => {
+  writeHash(Grid.readRange(Grid.$contentRange()))
+}, 500)
+
 export function checkpoint() {
-  History.push(grid)
+  History.push(Grid.getGrid())
+  save()
 }
 
 export function undo() {
   if (!History.canUndo()) return
   const grid = History.undo()
-  restoreGrid(grid)
+  Grid.setGrid(grid)
+  save()
 }
 
 export function redo() {
   if (!History.canRedo()) return
   const grid = History.redo()
-  restoreGrid(grid)
+  Grid.setGrid(grid)
+  save()
 }
+
+// Init
+setTimeout(async () => {
+  const text = await readHash()
+  if (text) {
+    Grid.insertText({ x: 0, y: 0 }, text)
+  }
+  checkpoint()
+})
 
 //
 
-export function copy() {
-  console.log('copy')
-}
+export function copy() {}
 
 export function cut() {
-  console.log('cut')
-  const range = Grid.getSelectionRange()
-  Grid.removeRange(range)
+  const selectionRange = Grid.$selectionRange()
+  Grid.removeRange(selectionRange)
   checkpoint()
   Keyboard.focus()
 }
@@ -112,31 +74,41 @@ export function cut() {
 //
 
 export function selectColumn() {
-  const range = Grid.getSelectionRange()
-  if (!range) return
-  Grid.setCursorAndSelectionStart(
+  const { start, end } = Grid.$selection()
+  const contentRange = Grid.$contentRange()
+
+  const top = contentRange.y
+  const bottom = contentRange.y + contentRange.height
+  const selectionGoesUp = start.y >= end.y
+
+  Grid.select(
     {
-      x: grid.cursor.x,
-      y: 0,
+      x: start.x,
+      y: selectionGoesUp ? bottom : top,
     },
     {
-      x: grid.selectionStart.x,
-      y: 99999,
+      x: end.x,
+      y: selectionGoesUp ? top : bottom,
     },
   )
 }
 
 export function selectRow() {
-  const range = Grid.getSelectionRange()
-  if (!range) return
-  Grid.setCursorAndSelectionStart(
+  const { start, end } = Grid.$selection()
+  const contentRange = Grid.$contentRange()
+
+  const left = contentRange.x
+  const right = contentRange.x + contentRange.width
+  const selectionGoesLeft = start.x >= end.x
+
+  Grid.select(
     {
-      x: 0,
-      y: grid.cursor.y,
+      x: selectionGoesLeft ? right : left,
+      y: start.y,
     },
     {
-      x: 99999,
-      y: grid.selectionStart.y,
+      x: selectionGoesLeft ? left : right,
+      y: end.y,
     },
   )
 }
@@ -147,11 +119,11 @@ export function selectAll() {
 }
 
 export function clearSelection() {
-  Grid.clearSelection(grid)
+  Grid.clearSelection()
 }
 
 export function compositionStateChange(compositionState, compositionText) {
-  const selectionRange = Grid.getSelectionRange()
+  const selectionRange = Grid.$selectionRange()
 
   if (compositionState === 'start') {
     View.showInputRange(selectionRange)
@@ -172,7 +144,7 @@ export function compositionStateChange(compositionState, compositionText) {
     console.log('composition end')
     // Grid.setCursorAndSelectionStart(compositionStart)
     View.hideInputRange()
-    View.showCursor(grid.cursor)
+    View.showCursor(Grid.$selection().end)
     View.showSelectionRange(selectionRange)
   }
 }
@@ -180,47 +152,59 @@ export function compositionStateChange(compositionState, compositionText) {
 export function insertText(text, type) {
   console.log('insertText', text, type)
 
-  const selectionRange = Grid.getSelectionRange()
+  const selectionRange = Grid.$selectionRange()
 
   const removed = Grid.removeRange(selectionRange)
 
   const bounds = Grid.insertText(selectionRange, text)
 
   if (bounds) {
-    Grid.setCursorAndSelectionStart({
-      x: bounds.x + bounds.width + 1,
-      y: bounds.y + bounds.height,
-    })
+    Grid.select(Point.add(Range.bottomRight(bounds), { x: 1, y: 0 }))
   }
 
   if (removed || bounds) checkpoint()
 }
 
 export function moveCursor(offset) {
-  Grid.setCursorAndSelectionStart(Point.add(grid.cursor, offset))
+  // Grid.clearSelection()
+  // moveSelectionBy(offset)
+  const { end } = Grid.$selection()
+  Grid.select(Point.add(end, offset))
 }
 
 export function moveCursorAndSelect(offset) {
-  Grid.setCursor(Point.add(grid.cursor, offset))
+  const { end } = Grid.$selection()
+  Grid.selectTo(Point.add(end, offset))
 }
 
 export function moveCursorAndDisplace(offset) {
-  Grid.displaceRangeBy(Grid.getSelectionRange(), offset)
+  const selectionRange = Grid.$selectionRange()
+  Grid.displaceRangeBy(selectionRange, offset)
+  moveSelectionBy(offset)
   checkpoint()
+}
+
+function moveSelectionBy(offset) {
+  Grid.$selection.update(({ start, end }) => {
+    return {
+      start: Point.add(start, offset),
+      end: Point.add(end, offset),
+    }
+  })
 }
 
 export function eraseBackward(isWord) {
   console.log('eraseBackward', isWord)
-  const range = Grid.getSelectionRange()
-  const removed = Grid.removeRange(range)
+  const selectionRange = Grid.$selectionRange()
+  const removed = Grid.removeRange(selectionRange)
   moveCursor({ x: -1, y: 0 })
   if (removed) checkpoint()
 }
 
 export function eraseForward(isWord) {
   console.log('eraseForward', isWord)
-  const range = Grid.getSelectionRange()
-  const removed = Grid.removeRange(range)
+  const selectionRange = Grid.$selectionRange()
+  const removed = Grid.removeRange(selectionRange)
   moveCursor({ x: +1, y: 0 })
   if (removed) checkpoint()
 }
@@ -229,7 +213,7 @@ export function eraseForward(isWord) {
 
 export function leftClickStart(screen, shiftKey) {
   const start = View.screenToGrid(screen)
-  const selectionRange = Grid.getSelectionRange()
+  const selectionRange = Grid.$selectionRange()
   if (selectionRange && Range.contains(selectionRange, start)) {
     View.showDashedRange(selectionRange)
     return {
@@ -243,20 +227,22 @@ export function leftClickStart(screen, shiftKey) {
         View.hideDashedRange()
         const offset = Point.sub(position, start)
         if (offset.x === 0 && offset.y === 0) return
-        Grid.moveRangeBy(Grid.getSelectionRange(), offset)
+        const selectionRange = Grid.$selectionRange()
+        Grid.moveRangeBy(selectionRange, offset)
+        moveSelectionBy(offset)
         checkpoint()
       },
     }
   } else {
     if (shiftKey) {
-      Grid.setCursor(start)
+      Grid.selectTo(start)
     } else {
-      Grid.setCursorAndSelectionStart(start)
+      Grid.select(start)
     }
     return {
       move(screen) {
         const position = View.screenToGrid(screen)
-        Grid.setCursor(position)
+        Grid.selectTo(position)
       },
       end(screen) {},
     }
@@ -267,55 +253,87 @@ export function rightClickStart(screen, ctrlKey) {
   return Pan.startPanning(screen)
 }
 
-Mouse.onScroll((offset) => {
+Mouse.onScroll.subscribe((offset) => {
   // Pan.panBy(offset, true)
 })
 
-BrowserZoom.onZoom((offset) => {
-  Pan.panBy(offset, false)
+BrowserZoom.onZoom.subscribe((offset) => {
+  Pan.moveBy(offset, false)
 })
 
-// TODO: IMPORTANT: cache this or something
-function getGridContentRange() {
-  const range = Range.getBoundingRange(
-    Grid.getCells().map((cell) => Point.scale(cell.position, cellSize)),
-  )
-  range.width += cellSize
-  range.height += cellSize
-  return range
-}
-
-const debouncedUpdateScrollbars = debounce(Scrollbars.update, 100)
-
-export function panChanged(panOffset) {
-  // console.log('panChanged', panOffset)
-  View.showPanOffset(panOffset)
-
-  //
-
-  if (window.foo) return
-  const contentRange = getGridContentRange()
-  Scrollbars.update(contentRange, {
-    x: -panOffset.x,
-    y: -panOffset.y,
-  })
-}
+Pan.$offset.subscribe((offset) => {
+  View.showPanOffset(offset)
+})
 
 //
 
 Scrollbars.mount(View.$grid)
 
-Scrollbars.onScroll(({ x, y }) => {
-  Pan.setPanOffset({ x: -x, y: -y })
+let movedCameraUsingScrollbars = false
+const extensionAmount = 0 * cellSize
+let scrollRange = { x: 0, y: 0, width: 0, height: 0 }
+
+// TODO:
+Scrollbars.onScroll.subscribe((scrollOffset) => {
+  const viewPosition = Point.add(
+    scrollRange,
+    scrollOffset /* {
+    x: extensionAmount,
+    y: extensionAmount,
+  } */,
+  )
+
+  movedCameraUsingScrollbars = true
+  Pan.$offset.set(Point.scale(viewPosition, -1))
 })
 
-//   when pan changes
-// X when resized (handled by scrollbars module itself)
-//   when content range changes!!!!!!!!!!!!!!!!!!!!!!!!!
-Scrollbars.update
+computed(
+  [
+    Pan.$offset,
+    View.$gridPixelDimensions,
+    Grid.$selectionRange,
+    Grid.$contentRange,
+  ],
+  (panOffset, gridPixelDimensions, selectionRange, contentRange) => {
+    if (movedCameraUsingScrollbars) {
+      movedCameraUsingScrollbars = false
+      return
+    }
+
+    const viewPosition = Point.scale(panOffset, -1)
+
+    const viewRange = {
+      ...viewPosition,
+      ...gridPixelDimensions,
+    }
+
+    const extendedViewRange = {
+      x: viewRange.x - extensionAmount,
+      y: viewRange.y - extensionAmount,
+      width: viewRange.width + extensionAmount * 2,
+      height: viewRange.height + extensionAmount * 2,
+    }
+
+    scrollRange = Range.getBoundingRange([
+      rangeGridToScreen(contentRange),
+      rangeGridToScreen(selectionRange),
+      extendedViewRange,
+    ])
+
+    const { width, height } = scrollRange
+    const scrollOffset = Point.sub(viewPosition, scrollRange /* xy */)
+    Scrollbars.update({ width, height }, scrollOffset)
+  },
+)
+
+function rangeGridToScreen(range) {
+  return {
+    ...Point.scale(range, cellSize),
+    width: (range.width + 1) * cellSize,
+    height: (range.height + 1) * cellSize,
+  }
+}
 
 //
 //
 //
-
-checkpoint()

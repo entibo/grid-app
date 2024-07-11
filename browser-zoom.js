@@ -24,8 +24,8 @@ addEventListener('resize', (e) => {
   const newCursorPosition = Point.round(
     Point.scale(currentCursorPosition, zoomRatio),
   )
-  const distance = Point.sub(newCursorPosition, currentCursorPosition)
-  onZoom.emit(distance)
+  const offset = Point.sub(newCursorPosition, currentCursorPosition)
+  onZoom.emit(offset)
 
   currentDevicePixelRatio = newDevicePixelRatio
   currentCursorPosition = newCursorPosition

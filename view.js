@@ -1,6 +1,14 @@
 import { cellSize } from './global.js'
+import {
+  $cellCreated,
+  $cellMoved,
+  $cellRemoved,
+  $cellRestored,
+  $cellUpdated,
+} from './grid.js'
 import { $textarea } from './keyboard.js'
 import * as Point from './point.js'
+import { signal } from './signal.js'
 import { debounce } from './util.js'
 
 export function screenToGrid(screen) {
@@ -14,6 +22,14 @@ export const $grid = document.createElement('div')
 $grid.className = 'grid'
 $grid.style.setProperty('--cell-size', `${cellSize}px`)
 document.body.appendChild($grid)
+
+export const $gridPixelDimensions = signal({ width: 0, height: 0 })
+new ResizeObserver(() => {
+  $gridPixelDimensions.set({
+    width: $grid.offsetWidth,
+    height: $grid.offsetHeight,
+  })
+}).observe($grid)
 
 const $gridBackground = document.createElement('div')
 $gridBackground.innerHTML = `<svg width="100%" height="100%">
@@ -117,7 +133,7 @@ export function showPanOffset({ x, y }) {
 
 //
 
-export function cellCreated({ id, value, position }) {
+$cellCreated.subscribe(({ id, value, position }) => {
   const $cell = document.createElement('div')
   $cell.className = 'cell'
   $cells.appendChild($cell)
@@ -126,12 +142,12 @@ export function cellCreated({ id, value, position }) {
   $cell.textContent = value
 
   cellIdToElementMap.set(id, $cell)
-}
+})
 
 // Same as cellCreated, except we are
 // guaranteed that cellCreated was called
 // with this id in the past
-export function cellRestored({ id, value, position }) {
+$cellRestored.subscribe(({ id, value, position }) => {
   const $cell = cellIdToElementMap.get(id)
   if (!$cell.isConnected) {
     $cells.appendChild($cell)
@@ -139,23 +155,23 @@ export function cellRestored({ id, value, position }) {
 
   setGridPosition($cell, position)
   $cell.textContent = value
-}
+})
 
-export function cellUpdated({ id, value }) {
+$cellUpdated.subscribe(({ id, value }) => {
   const $cell = cellIdToElementMap.get(id)
   $cell.textContent = value
-}
+})
 
-export function cellMoved({ id, position }) {
+$cellMoved.subscribe(({ id, position }) => {
   const $cell = cellIdToElementMap.get(id)
   setGridPosition($cell, position)
-}
+})
 
-export function cellRemoved({ id }) {
+$cellRemoved.subscribe(({ id }) => {
   const $cell = cellIdToElementMap.get(id)
   $cell.remove()
   // cellIdToElementMap.delete(id)
-}
+})
 
 //
 

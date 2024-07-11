@@ -1,98 +1,107 @@
-import { filterMap, partition } from './util.js'
-import * as Range from './range.js'
 import * as Point from './point.js'
-import {
-  cellCreated,
-  cellMoved,
-  cellRemoved,
-  cellUpdated,
-  cursorChanged,
-  selectionChanged,
-} from './index.js'
+import * as Range from './range.js'
+import { debounce, partition } from './util.js'
 
-export let grid = {
-  cursor: null,
-  selectionStart: null,
-  cellMap: new Map(),
+import { computed, signal } from './signal.js'
+
+export const $cellCreated = signal()
+export const $cellRestored = signal()
+export const $cellMoved = signal()
+export const $cellUpdated = signal()
+export const $cellRemoved = signal()
+
+// Subscribe to each signal for logging
+$cellCreated.subscribe((cell) => console.log('cellCreated', cell))
+$cellRestored.subscribe((cell) => console.log('cellRestored', cell))
+$cellMoved.subscribe((cell) => console.log('cellMoved', cell))
+$cellUpdated.subscribe((cell) => console.log('cellUpdated', cell))
+$cellRemoved.subscribe((cell) => console.log('cellRemoved', cell))
+
+//
+
+const $cellMap = signal(new Map())
+
+export const $selection = signal({ start: { x: 0, y: 0 }, end: { x: 0, y: 0 } })
+export const $selectionRange = computed([$selection], (selection) => {
+  const { start, end } = selection
+  return Range.fromPoints(start, end)
+})
+
+export const $contentRange = signal({ x: 0, y: 0, width: 0, height: 0 })
+function updateContentRange(cellMap) {
+  const positions = Array.from(cellMap.values()).map(({ position }) => position)
+  $contentRange.set(Range.getBoundingRange(positions))
 }
+$cellMap.subscribe(debounce(updateContentRange, 0))
 
-export function setGrid(newGrid) {
-  grid = newGrid
-}
-
-function setCells(cells) {
-  const cellMap = new Map(
-    cells.map((cell) => [`${cell.position.x},${cell.position.y}`, cell]),
-  )
-  grid = {
-    ...grid,
-    cellMap,
+export function getGrid() {
+  return {
+    cellMap: $cellMap(),
+    selection: $selection(),
   }
 }
+export function setGrid({ selection, cellMap }) {
+  const oldCells = getCells()
+  const oldCellsById = new Map(oldCells.map((cell) => [cell.id, cell]))
 
-let nextId = 0
+  $cellMap.set(cellMap)
+
+  const newCells = getCells()
+  for (const cell of newCells) {
+    $cellRestored.emit(cell)
+    oldCellsById.delete(cell.id)
+  }
+
+  for (const cell of oldCellsById.values()) {
+    $cellRemoved.emit(cell)
+  }
+
+  $selection.set(selection)
+}
+
 function newCell(position, value) {
-  const id = (nextId++).toString()
-  return { position, value, id }
+  return { position, value, id: {} }
 }
 
-// Cursor stuff
+// Selection
 
-export function getSelectionRange() {
-  if (!grid.cursor || !grid.selectionStart) return null
-  return Range.fromPoints(grid.cursor, grid.selectionStart)
+export function select(start, end = start) {
+  $selection.set({ start, end })
 }
-
-export function setCursor(cursor) {
-  if (Point.equals(cursor, grid.cursor)) return
-  grid = { ...grid, cursor }
-  cursorChanged(cursor)
-  selectionChanged(getSelectionRange(grid))
-}
-
-export function setSelectionStart(selectionStart) {
-  if (Point.equals(selectionStart, grid.selectionStart)) return
-  grid = { ...grid, selectionStart }
-  selectionChanged(getSelectionRange(grid))
-}
-
-export function setCursorAndSelectionStart(cursor, selectionStart = cursor) {
-  if (
-    Point.equals(cursor, grid.cursor) &&
-    Point.equals(selectionStart, grid.selectionStart)
-  )
-    return
-  grid = { ...grid, cursor, selectionStart }
-  cursorChanged(cursor)
-  selectionChanged(getSelectionRange(grid))
-}
-
-export function moveSelectionBy(offset) {
-  setCursorAndSelectionStart(
-    Point.add(grid.cursor, offset),
-    Point.add(grid.selectionStart, offset),
-  )
+export function selectTo(end) {
+  $selection.update(({ start }) => {
+    return { start, end }
+  })
 }
 
 export function clearSelection() {
-  setSelectionStart(grid.cursor)
+  $selection.update(({ end }) => {
+    return { start: end, end }
+  })
 }
 
 //
 
 export function getCellAt({ x, y }) {
-  return grid.cellMap.get(`${x},${y}`)
+  return $cellMap().get(`${x},${y}`)
 }
 
 export function getCells() {
-  return Array.from(grid.cellMap.values())
+  return Array.from($cellMap().values())
+}
+
+function setCells(cells) {
+  $cellMap.set(
+    new Map(
+      cells.map((cell) => [`${cell.position.x},${cell.position.y}`, cell]),
+    ),
+  )
 }
 
 export function readRange(range) {
   const cells = getCells().filter((cell) =>
     Range.contains(range, cell.position),
   )
-  // return ... positionedValuesToText
   return positionedValuesToText(cells)
 }
 
@@ -140,9 +149,9 @@ export function writeRange(range, pseudoCells) {
 
   setCells([...untouchedCells, ...updatedCells, ...createdCells])
 
-  updatedCells.forEach((cell) => cellUpdated(cell))
-  createdCells.forEach((cell) => cellCreated(cell))
-  removedCells.forEach((cell) => cellRemoved(cell))
+  updatedCells.forEach((cell) => $cellUpdated.emit(cell))
+  createdCells.forEach((cell) => $cellCreated.emit(cell))
+  removedCells.forEach((cell) => $cellRemoved.emit(cell))
 }
 
 export function removeRange(range) {
@@ -156,7 +165,7 @@ export function removeRange(range) {
     }),
   )
 
-  removedCells.forEach(cellRemoved)
+  removedCells.forEach($cellRemoved.emit)
   return removedCells.length
 }
 
@@ -233,12 +242,10 @@ export function displaceRangeBy(range, offset) {
       if (!newPosition) return cell
 
       const movedCell = { ...cell, position: newPosition }
-      cellMoved(movedCell, cell)
+      $cellMoved.emit(movedCell, cell)
       return movedCell
     }),
   )
-
-  moveSelectionBy(offset)
 }
 
 export function moveRangeBy(range, offset, removeOverlap = true) {
@@ -246,26 +253,25 @@ export function moveRangeBy(range, offset, removeOverlap = true) {
 
   if (removeOverlap) {
     const targetRange = Range.moveBy(range, offset)
+
     const [removedCells, remainingCells] = partition(
       cells,
       (cell) =>
         Range.contains(targetRange, cell.position) &&
         !Range.contains(range, cell.position),
     )
-    removedCells.forEach(cellRemoved)
+    removedCells.forEach($cellRemoved.emit)
     cells = remainingCells
   }
 
   cells = cells.map((cell) => {
     if (!Range.contains(range, cell.position)) return cell
     const movedCell = { ...cell, position: Point.add(cell.position, offset) }
-    cellMoved(movedCell, cell)
+    $cellMoved.emit(movedCell, cell)
     return movedCell
   })
 
   setCells(cells)
-
-  moveSelectionBy(offset)
 }
 
 //
@@ -303,11 +309,9 @@ function textToPositionedValues(text) {
   return positionedValues
 }
 
+// Full-width space character
 const defaultTextValue = '\u3000'
-/**
- * Input: [{ position: {32,6}, value: "a" }, { position: {33,6}, value: "b" }]
- * Output: "ab"
- */
+// TODO: sloooow
 function positionedValuesToText(positionedValues) {
   const bounds = Range.getBoundingRange(
     positionedValues.map(({ position }) => position),

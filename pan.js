@@ -1,25 +1,22 @@
-import { panChanged } from './index.js'
 import * as Point from './point.js'
+import { signal } from './signal.js'
 
-let targetPanOffset = null
-export let panOffset = { x: 0, y: 0 }
+let targetOffset = null
+export const $offset = signal({ x: 0, y: 0 })
 
-export function panBy(delta, transition = false) {
+export function moveBy(offset, transition = false) {
   if (transition) {
-    velocity = { x: 0, y: 0 }
-    targetPanOffset = Point.add(targetPanOffset || panOffset, delta)
+    stop()
+    targetOffset = Point.add(targetOffset || $offset.value, offset)
   } else {
-    setPanOffset(Point.add(panOffset, delta))
+    $offset.update((currentOffset) => Point.add(currentOffset, offset))
   }
 }
 
-export function setPanOffset(point) {
-  // console.log('setPanOffset', panOffset, point)
-  panOffset = point
-  panChanged(point)
-}
-
 let velocity = { x: 0, y: 0 }
+export function stop() {
+  velocity = { x: 0, y: 0 }
+}
 
 {
   let previousTime = document.timeline.currentTime
@@ -30,10 +27,12 @@ let velocity = { x: 0, y: 0 }
     const ms = time - previousTime
     previousTime = time
 
-    if (targetPanOffset) {
-      setPanOffset(tendTo(panOffset, targetPanOffset, 3 * ms))
-      if (Point.equals(panOffset, targetPanOffset)) {
-        targetPanOffset = null
+    if (targetOffset) {
+      $offset.update((currentOffset) =>
+        tendTo(currentOffset, targetOffset, 3 * ms),
+      )
+      if (Point.equals($offset(), targetOffset)) {
+        targetOffset = null
       }
       return
     }
@@ -41,18 +40,20 @@ let velocity = { x: 0, y: 0 }
     velocity = tendTo(velocity, { x: 0, y: 0 }, ms)
     if (Point.equals(velocity, { x: 0, y: 0 })) return
 
-    setPanOffset(Point.add(panOffset, Point.scale(velocity, ms)))
+    $offset.update((currentOffset) =>
+      Point.add(currentOffset, Point.scale(velocity, ms)),
+    )
   }
 }
 
 export function startPanning(startScreenPosition) {
-  velocity = { x: 0, y: 0 }
+  stop()
 
-  targetPanOffset = null
+  targetOffset = null
 
   let releaseVelocity = { x: 0, y: 0 }
 
-  const panOffsetStart = panOffset
+  const startOffset = $offset()
 
   let previousPosition = startScreenPosition
   let previousTime = performance.now()
@@ -61,8 +62,7 @@ export function startPanning(startScreenPosition) {
     move(screenPosition) {
       const screenDistanceStart = Point.sub(screenPosition, startScreenPosition)
 
-      // console.log('move dsitance:', screenPosition)
-      setPanOffset(Point.add(panOffsetStart, screenDistanceStart))
+      $offset.set(Point.add(startOffset, screenDistanceStart))
 
       const time = performance.now()
       const ms = Math.max(1, time - previousTime)

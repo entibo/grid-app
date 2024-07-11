@@ -10,11 +10,9 @@ let buttonsState = 0
 let lastPosition = { x: 0, y: 0 }
 
 function startLeft(e) {
-  console.log('startLeft', e)
   left = leftClickStart({ x: e.clientX, y: e.clientY }, e.shiftKey)
 }
 function startRight(e) {
-  console.log('startRight', e)
   right = rightClickStart({ x: e.clientX, y: e.clientY }, e.ctrlKey)
 }
 function stopLeft() {
@@ -29,6 +27,7 @@ function stopRight() {
 //
 
 addEventListener('pointerdown', (e) => {
+  // return
   buttonsState = e.buttons
   if (buttonsState & 1) startLeft(e)
   if (buttonsState & 2) startRight(e)
@@ -70,7 +69,6 @@ addEventListener('contextmenu', (e) => {
 })
 
 addEventListener('mousedown', (e) => {
-  console.log('mousedown', e.button, e.pointerType)
   // Prevents moving focus away from the textarea
   e.preventDefault()
   e.stopPropagation()
@@ -80,9 +78,13 @@ addEventListener('mousedown', (e) => {
 
 export const onScroll = signal()
 
-addEventListener('wheel', (e) => {
-  if (e.ctrlKey) return
-  onScroll.emit({ x: -e.deltaX, y: -e.deltaY })
-  // Swiping left can be interpreted as "back"
-  e.preventDefault()
-})
+addEventListener(
+  'wheel',
+  (e) => {
+    if (e.ctrlKey) return
+    onScroll.emit({ x: -e.deltaX, y: -e.deltaY })
+    // Swiping left can be interpreted as "back"
+    // e.preventDefault()
+  },
+  { passive: false },
+)

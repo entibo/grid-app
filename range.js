@@ -34,6 +34,7 @@ export function overlaps(range1, range2) {
 }
 
 export function getBoundingRange(pointsAndRanges) {
+  if (pointsAndRanges.length === 0) return { x: 0, y: 0, width: 0, height: 0 }
   let x_min = Infinity
   let x_max = -Infinity
   let y_min = Infinity
