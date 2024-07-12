@@ -300,8 +300,7 @@ function textToPositionedValues(text) {
   const positionedValues = []
   for (let y = 0; y < lines.length; y++) {
     const line = lines[y]
-    for (let x = 0; x < line.length; x++) {
-      const c = line[x]
+    for (const [x, c] of [...line].entries()) {
       if (c.match(/\s/)) continue
       positionedValues.push({ position: { x, y }, value: c })
     }

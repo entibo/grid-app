@@ -29,8 +29,10 @@ Grid.$selectionRange.subscribe((selectionRange) => {
 //
 
 const save = debounce(() => {
-  writeHash(Grid.readRange(Grid.$contentRange()))
-}, 500)
+  const text = Grid.readRange(Grid.$contentRange())
+  document.title = text.match(/^\S{1,20}/)?.[0] || 'Empty grid'
+  writeHash(text)
+}, 100)
 
 export function checkpoint() {
   History.push(Grid.getGrid())
@@ -191,6 +193,13 @@ function moveSelectionBy(offset) {
       end: Point.add(end, offset),
     }
   })
+}
+
+export function moveToNextCell() {
+  moveCursor({ x: 1, y: 0 })
+}
+export function moveToNextLine() {
+  moveCursor({ x: 0, y: 1 })
 }
 
 export function eraseBackward(isWord) {

@@ -9,6 +9,8 @@ import {
   moveCursor,
   moveCursorAndDisplace,
   moveCursorAndSelect,
+  moveToNextCell,
+  moveToNextLine,
   redo,
   selectAll,
   selectColumn,
@@ -66,7 +68,7 @@ $textarea.addEventListener('compositionend', (e) => {
 })
 
 $textarea.addEventListener('input', (e) => {
-  // console.log('input', e.data, e.inputType)
+  console.log('input', JSON.stringify(e.data), e.inputType)
   if (e.isComposing) return
   if (e.inputType === 'deleteContentBackward') return
   if (e.inputType === 'deleteContentForward') return
@@ -136,20 +138,22 @@ $textarea.addEventListener('keydown', (e) => {
 
   if (e.key === 'Enter') {
     e.preventDefault()
-    // placeholder
+    moveToNextLine()
     return
   }
 
   if (e.key === 'Tab') {
     e.preventDefault()
-    // placeholder
+    moveToNextCell()
     return
   }
 
-  if (e.key === 'Space') {
-    e.preventDefault()
-    // placeholder
-    return
+  if (e.key === ' ') {
+    if (!e.ctrlKey) {
+      e.preventDefault()
+      eraseForward()
+      return
+    }
   }
 
   const arrowOffset = {
