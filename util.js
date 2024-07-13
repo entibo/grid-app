@@ -57,3 +57,7 @@ export function filterMap(map, predicate) {
 export function lerp(a, b, t) {
   return a * (1 - t) + b * t
 }
+
+export function clamp(n, min, max) {
+  return Math.min(Math.max(n, min), max)
+}

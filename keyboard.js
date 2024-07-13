@@ -74,7 +74,10 @@ $textarea.addEventListener('input', (e) => {
   if (e.inputType === 'deleteContentForward') return
   if (e.inputType === 'insertLineBreak') return
   // if (e.inputType === 'insertCompositionText') return
-  // if (e.inputType === 'insertFromPaste') return
+  if (e.inputType === 'insertFromPaste') {
+    insertText($textarea.value, e.inputType)
+    return
+  }
   if (e.data === null) return
 
   insertText(e.data, e.inputType)

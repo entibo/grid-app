@@ -9,7 +9,6 @@ import * as Range from './range.js'
 import { debounce } from './util.js'
 import * as View from './view.js'
 import { cellSize } from './global.js'
-import * as Scrollbars from './scrollbars.js'
 import { signal, computed } from './signal.js'
 import { readHash, writeHash } from './storage.js'
 
@@ -270,78 +269,7 @@ BrowserZoom.onZoom.subscribe((offset) => {
   Pan.moveBy(offset, false)
 })
 
-Pan.$offset.subscribe((offset) => {
-  View.showPanOffset(offset)
-})
-
 //
-
-Scrollbars.mount(View.$grid)
-
-let movedCameraUsingScrollbars = false
-const extensionAmount = 0 * cellSize
-let scrollRange = { x: 0, y: 0, width: 0, height: 0 }
-
-// TODO:
-Scrollbars.onScroll.subscribe((scrollOffset) => {
-  const viewPosition = Point.add(
-    scrollRange,
-    scrollOffset /* {
-    x: extensionAmount,
-    y: extensionAmount,
-  } */,
-  )
-
-  movedCameraUsingScrollbars = true
-  Pan.$offset.set(Point.scale(viewPosition, -1))
-})
-
-computed(
-  [
-    Pan.$offset,
-    View.$gridPixelDimensions,
-    Grid.$selectionRange,
-    Grid.$contentRange,
-  ],
-  (panOffset, gridPixelDimensions, selectionRange, contentRange) => {
-    if (movedCameraUsingScrollbars) {
-      movedCameraUsingScrollbars = false
-      return
-    }
-
-    const viewPosition = Point.scale(panOffset, -1)
-
-    const viewRange = {
-      ...viewPosition,
-      ...gridPixelDimensions,
-    }
-
-    const extendedViewRange = {
-      x: viewRange.x - extensionAmount,
-      y: viewRange.y - extensionAmount,
-      width: viewRange.width + extensionAmount * 2,
-      height: viewRange.height + extensionAmount * 2,
-    }
-
-    scrollRange = Range.getBoundingRange([
-      rangeGridToScreen(contentRange),
-      rangeGridToScreen(selectionRange),
-      extendedViewRange,
-    ])
-
-    const { width, height } = scrollRange
-    const scrollOffset = Point.sub(viewPosition, scrollRange /* xy */)
-    Scrollbars.update({ width, height }, scrollOffset)
-  },
-)
-
-function rangeGridToScreen(range) {
-  return {
-    ...Point.scale(range, cellSize),
-    width: (range.width + 1) * cellSize,
-    height: (range.height + 1) * cellSize,
-  }
-}
 
 //
 //

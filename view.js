@@ -5,84 +5,88 @@ import {
   $cellRemoved,
   $cellRestored,
   $cellUpdated,
+  $contentRange,
+  $selectionRange,
 } from './grid.js'
 import { $textarea } from './keyboard.js'
 import * as Point from './point.js'
-import { signal } from './signal.js'
-import { debounce } from './util.js'
+import { computed, signal } from './signal.js'
+import { clamp, debounce } from './util.js'
+
+import * as Pan from './pan.js'
 
 export function screenToGrid(screen) {
-  const rect = $origin.getBoundingClientRect()
+  const rect = originElement.getBoundingClientRect()
   const x = Math.floor((screen.x - rect.left) / cellSize)
   const y = Math.floor((screen.y - rect.top) / cellSize)
   return { x, y }
 }
 
-export const $grid = document.createElement('div')
-$grid.className = 'grid'
-$grid.style.setProperty('--cell-size', `${cellSize}px`)
-document.body.appendChild($grid)
+export const gridElement = document.createElement('div')
+gridElement.className = 'grid'
+gridElement.style.setProperty('--cell-size', `${cellSize}px`)
+document.body.appendChild(gridElement)
 
 export const $gridPixelDimensions = signal({ width: 0, height: 0 })
 new ResizeObserver(() => {
   $gridPixelDimensions.set({
-    width: $grid.offsetWidth,
-    height: $grid.offsetHeight,
+    width: gridElement.offsetWidth,
+    height: gridElement.offsetHeight,
   })
-}).observe($grid)
+}).observe(gridElement)
 
-const $gridBackground = document.createElement('div')
-$gridBackground.innerHTML = `<svg width="100%" height="100%">
+const gridBackgroundElement = document.createElement('div')
+gridBackgroundElement.innerHTML = `<svg width="100%" height="100%">
   <defs>
     <pattern id="gridPattern" width="${cellSize}" height="${cellSize}" patternUnits="userSpaceOnUse">
       <path d="M ${cellSize} 0 L 0 0 0 ${cellSize}"
-            stroke="var(--grid-color)" 
+            stroke="var(--grid-lines-color)" 
             stroke-width="1" 
             fill="none"/>
     </pattern>
   </defs>
   <rect width="100%" height="100%" fill="url(#gridPattern)" />
   </svg>`
-const $gridSVGPattern = $gridBackground.querySelector('pattern')
-// onPanChanged(({ x, y }) => {
-//   $gridSVGPattern.setAttribute(
-//     'patternTransform',
-//     `translate(${x % cellSize} ${y % cellSize})`,
-//   )
-// })
-$gridBackground.className = 'gridBackground'
-$grid.appendChild($gridBackground)
+const gridPatternElement = gridBackgroundElement.querySelector('pattern')
+gridBackgroundElement.className = 'gridBackground'
+gridElement.appendChild(gridBackgroundElement)
 
-const $origin = document.createElement('div')
-$origin.className = 'origin'
-$grid.appendChild($origin)
+const scrollBoxElement = document.createElement('div')
+scrollBoxElement.className = 'scrollBox'
+gridElement.appendChild(scrollBoxElement)
 
-const $cells = document.createElement('div')
-$cells.className = 'cells'
-$origin.appendChild($cells)
+const originElement = document.createElement('div')
+originElement.className = 'origin'
+scrollBoxElement.appendChild(originElement)
 
-const $cursor = document.createElement('div')
-$cursor.className = 'cursor'
-$origin.appendChild($cursor)
+const cellsElement = document.createElement('div')
+cellsElement.className = 'cells'
+originElement.appendChild(cellsElement)
 
-const $selectionRange = document.createElement('div')
-$selectionRange.className = 'range selectionRange'
-$origin.appendChild($selectionRange)
+const cursorElement = document.createElement('div')
+cursorElement.className = 'cursor'
+originElement.appendChild(cursorElement)
 
-const $dashedRange = document.createElement('div')
-$dashedRange.className = 'range dashedRange'
-$dashedRange.style.display = 'none'
-$origin.appendChild($dashedRange)
+const selectionRangeElement = document.createElement('div')
+selectionRangeElement.className = 'range selectionRange'
+originElement.appendChild(selectionRangeElement)
 
-const $inputRange = document.createElement('div')
-$inputRange.className = 'range inputRange'
+const dashedRangeElement = document.createElement('div')
+dashedRangeElement.className = 'range dashedRange'
+dashedRangeElement.style.display = 'none'
+originElement.appendChild(dashedRangeElement)
+
+// TODO: rename this "composition" or "preview" something
+const inputRangeElement = document.createElement('div')
+inputRangeElement.className = 'range inputRange'
+// that's hacky
 for (let x = 0; x < 30; x++) {
-  $origin.appendChild($inputRange)
+  originElement.appendChild(inputRangeElement)
   // Fake cells to display user input
   const cell = document.createElement('div')
   cell.className = 'cell preview'
   cell.style.display = 'none'
-  $inputRange.appendChild(cell)
+  inputRangeElement.appendChild(cell)
 }
 
 //
@@ -95,138 +99,196 @@ setInterval(() => {
 
 //
 
-function showElement($) {
-  $.style.display = 'block'
+function showElement(el) {
+  el.style.display = 'block'
 }
 
-function hideElement($) {
-  $.style.display = 'none'
+function hideElement(el) {
+  el.style.display = 'none'
 }
 
-function setPosition($, { x, y }) {
-  $.style.translate = `${x}px ${y}px`
+function setPosition(el, { x, y }) {
+  el.style.translate = `${x}px ${y}px`
 }
 
-function setGridPosition($, point) {
-  setPosition($, Point.scale(point, cellSize))
+function setGridPosition(el, point) {
+  setPosition(el, Point.scale(point, cellSize))
 }
 
-function setDimensions($, { width, height }) {
-  $.style.width = `${(width + 1) * cellSize}px`
-  $.style.height = `${(height + 1) * cellSize}px`
+function setDimensions(el, { width, height }) {
+  el.style.width = `${(width + 1) * cellSize}px`
+  el.style.height = `${(height + 1) * cellSize}px`
 }
 
 //
+import * as Range from './range.js'
 
-export function showPanOffset({ x, y }) {
-  // console.log({
-  //   x: -x,
-  //   y: -y,
-  //   width: $grid.clientWidth,
-  //   height: $grid.clientHeight,
-  // })
-  // console.log('setting origin transform,', x, y)
+// Positive offset representing by how much the content
+// sticks out from 0,0 into negative coordinates
+const $topLeftContentOffset = computed(
+  [$selectionRange, $contentRange],
+  (selectionRange, contentRange) => {
+    return Point.scale(
+      Range.getBoundingRange([selectionRange, contentRange]),
+      cellSize,
+    )
+  },
+)
 
-  setPosition($gridBackground, { x: x % cellSize, y: y % cellSize })
-  setPosition($origin, { x, y })
-}
+$topLeftContentOffset.subscribe((offset) => {
+  console.log('topLeftContentOffset', offset)
+})
+
+let scrollReference = { x: 0, y: 0 }
+
+computed(
+  [Pan.$offset, $topLeftContentOffset, $gridPixelDimensions],
+  (panOffset, topLeftContentOffset, gridPixelDimensions) => {
+    gridPatternElement.setAttribute(
+      'patternTransform',
+      `translate(${panOffset.x % cellSize} ${panOffset.y % cellSize})`,
+    )
+
+    if (false) {
+      setPosition(originElement, panOffset)
+      return
+    }
+
+    originElement.style.marginLeft = `${Math.max(
+      panOffset.x,
+      -topLeftContentOffset.x,
+    )}px`
+    originElement.style.marginTop = `${Math.max(
+      panOffset.y,
+      -topLeftContentOffset.y,
+    )}px`
+
+    const { x, y } = Point.add(panOffset, topLeftContentOffset)
+    scrollReference = panOffset
+
+    const scroll = {
+      x: Math.max(-x, 0),
+      y: Math.max(-y, 0),
+    }
+
+    if (scroll.x > 0) {
+      const width = Math.ceil(
+        scroll.x + gridPixelDimensions.width + topLeftContentOffset.x,
+      )
+      originElement.style.width = `${width}px`
+    }
+
+    if (scroll.y > 0) {
+      const height = Math.ceil(
+        scroll.y + gridPixelDimensions.height + topLeftContentOffset.y,
+      )
+      originElement.style.height = `${height}px`
+    }
+
+    scrollBoxElement.scroll({
+      behavior: 'instant',
+      left: scroll.x,
+      top: scroll.y,
+    })
+  },
+)
 
 //
 
 $cellCreated.subscribe(({ id, value, position }) => {
-  const $cell = document.createElement('div')
-  $cell.className = 'cell'
-  $cells.appendChild($cell)
+  const el = document.createElement('div')
+  el.className = 'cell'
+  cellsElement.appendChild(el)
 
-  setGridPosition($cell, position)
-  $cell.textContent = value
+  setGridPosition(el, position)
+  el.textContent = value
 
-  cellIdToElementMap.set(id, $cell)
+  cellIdToElementMap.set(id, el)
 })
 
 // Same as cellCreated, except we are
 // guaranteed that cellCreated was called
 // with this id in the past
 $cellRestored.subscribe(({ id, value, position }) => {
-  const $cell = cellIdToElementMap.get(id)
-  if (!$cell.isConnected) {
-    $cells.appendChild($cell)
+  const el = cellIdToElementMap.get(id)
+  if (!el.isConnected) {
+    cellsElement.appendChild(el)
   }
 
-  setGridPosition($cell, position)
-  $cell.textContent = value
+  setGridPosition(el, position)
+  el.textContent = value
 })
 
 $cellUpdated.subscribe(({ id, value }) => {
-  const $cell = cellIdToElementMap.get(id)
-  $cell.textContent = value
+  const el = cellIdToElementMap.get(id)
+  el.textContent = value
 })
 
 $cellMoved.subscribe(({ id, position }) => {
-  const $cell = cellIdToElementMap.get(id)
-  setGridPosition($cell, position)
+  const el = cellIdToElementMap.get(id)
+  setGridPosition(el, position)
 })
 
 $cellRemoved.subscribe(({ id }) => {
-  const $cell = cellIdToElementMap.get(id)
-  $cell.remove()
+  const el = cellIdToElementMap.get(id)
+  el.remove()
   // cellIdToElementMap.delete(id)
 })
 
 //
 
 export function showCursor(position) {
-  showElement($cursor)
-  setGridPosition($cursor, position)
+  showElement(cursorElement)
+  setGridPosition(cursorElement, position)
 }
 
 export function hideCursor() {
-  hideElement($cursor)
+  hideElement(cursorElement)
 }
 
 //
 
 export function showSelectionRange(range) {
-  showElement($selectionRange)
-  setGridPosition($selectionRange, range)
-  setDimensions($selectionRange, range)
+  showElement(selectionRangeElement)
+  setGridPosition(selectionRangeElement, range)
+  setDimensions(selectionRangeElement, range)
 }
 
 export function hideSelectionRange() {
-  hideElement($selectionRange)
+  hideElement(selectionRangeElement)
 }
 
 //
 
 export function showDashedRange(range) {
-  showElement($dashedRange)
-  setGridPosition($dashedRange, range)
-  setDimensions($dashedRange, range)
+  showElement(dashedRangeElement)
+  setGridPosition(dashedRangeElement, range)
+  setDimensions(dashedRangeElement, range)
 }
 
 export function hideDashedRange() {
-  hideElement($dashedRange)
+  hideElement(dashedRangeElement)
 }
 
 //
 
 export function showInputRange({ x, y }) {
   const range = { x, y, width: 0, height: 0 }
-  $inputRange.style.display = 'flex'
-  setGridPosition($inputRange, range)
-  setDimensions($inputRange, range)
+  inputRangeElement.style.display = 'flex'
+  setGridPosition(inputRangeElement, range)
+  setDimensions(inputRangeElement, range)
 
   // Move the text area so that IME can show up in the right place
-  const rect = $inputRange.getBoundingClientRect()
+  const rect = inputRangeElement.getBoundingClientRect()
   setPosition($textarea, rect)
 }
 
 export function updateInputRange({ x, y }, compositionText) {
-  for (const cell of $inputRange.children) {
+  for (const cell of inputRangeElement.children) {
     hideElement(cell)
   }
   for (let i = 0; i < compositionText.length; i++) {
-    const cell = $inputRange.children[i]
+    const cell = inputRangeElement.children[i]
     cell.textContent = compositionText[i]
     cell.style.display = 'flex'
     cell.style.position = 'relative'
@@ -238,12 +300,12 @@ export function updateInputRange({ x, y }, compositionText) {
     width: compositionText.length - 1,
     height: 0,
   }
-  $inputRange.style.display = 'flex'
-  setGridPosition($inputRange, range)
-  setDimensions($inputRange, range)
+  inputRangeElement.style.display = 'flex'
+  setGridPosition(inputRangeElement, range)
+  setDimensions(inputRangeElement, range)
 }
 
 export function hideInputRange() {
-  hideElement($inputRange)
-  setDimensions($cursor, { width: 0, height: 0 })
+  hideElement(inputRangeElement)
+  setDimensions(cursorElement, { width: 0, height: 0 })
 }
