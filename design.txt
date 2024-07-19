@@ -131,3 +131,55 @@ Note on textarea focus
   option 1. mousedown event.preventDefault()
   option 2. setTimeout(() => focus(), 0)
   option 3. TBD
+
+
+----
+
+Refactor to account for 漢字 being 2-wide 
+
+# Preamble
+
+Do we allow selecting FREELY and then worry about which cells 
+make it or don't depending or our use case? 
+
+Or do we force and SNAP the selection to guarantee that there
+are no cells partially selected?
+
+
+
+# is cell contained in range?
+
+- can't just use Range.contains(range, cell.position)
+- could just use Range.contains(range, cell.range)
+  where cell.range is either {x,y,1,1} or {x,y,2,1}
+  note: this would return true if the cell is FULLY contained 
+- use case for matching with OVERLAP? (partially contained)
+
+#getCellAt 
+
+- lookup cell at x,y
+
+#search
+
+- iterates characters in query, using index as x
+- uses getCellAt 
+
+#writeRange 
+
+- Range.contains(range, cell.position)
+  the aim here is to clear everything within the range,
+  so we want to delete cells that overlap even if they 
+  are not fully contained within the range 
+- pseudoCell business should be OK
+
+#removeRange 
+
+- Range.contains(range, cell.position)
+
+#displaceRangeBy 
+
+- Range.contains(range, point)
+
+#moveRangeBy
+
+- Range.contains(position) ...

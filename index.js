@@ -6,23 +6,25 @@ import * as Mouse from './mouse.js'
 import * as Pan from './pan.js'
 import * as Point from './point.js'
 import * as Range from './range.js'
+import { readHash, writeHash } from './storage.js'
 import { debounce } from './util.js'
 import * as View from './view.js'
-import { cellSize } from './global.js'
-import { signal, computed } from './signal.js'
-import { readHash, writeHash } from './storage.js'
 
 Grid.$selection.subscribe(({ end }) => {
   View.showCursor(end)
-  Keyboard.focus()
+  // Keyboard.focus()
 })
 
 Grid.$selectionRange.subscribe((selectionRange) => {
-  View.showSelectionRange(selectionRange)
+  if (true || selectionRange.width > 0 || selectionRange.height > 0) {
+    View.showSelectionRange(selectionRange)
+  } else {
+    View.hideSelectionRange()
+  }
 
   const text = Grid.readRange(selectionRange)
   Keyboard.setValue(text)
-  Keyboard.focus()
+  // Keyboard.focus()
 })
 
 //
@@ -69,7 +71,7 @@ export function cut() {
   const selectionRange = Grid.$selectionRange()
   Grid.removeRange(selectionRange)
   checkpoint()
-  Keyboard.focus()
+  // Keyboard.focus()
 }
 
 //
@@ -154,7 +156,6 @@ export function insertText(text, type) {
   console.log('insertText', text, type)
 
   const selectionRange = Grid.$selectionRange()
-
   const removed = Grid.removeRange(selectionRange)
 
   const bounds = Grid.insertText(selectionRange, text)
@@ -204,6 +205,7 @@ export function moveToNextLine() {
 export function eraseBackward(isWord) {
   console.log('eraseBackward', isWord)
   const selectionRange = Grid.$selectionRange()
+  // TODO: check width
   const removed = Grid.removeRange(selectionRange)
   moveCursor({ x: -1, y: 0 })
   if (removed) checkpoint()
@@ -220,6 +222,8 @@ export function eraseForward(isWord) {
 // Mouse stuff
 
 export function leftClickStart(screen, shiftKey) {
+  console.log('leftClickStart', screen, shiftKey)
+  Keyboard.focus()
   const start = View.screenToGrid(screen)
   const selectionRange = Grid.$selectionRange()
   if (selectionRange && Range.contains(selectionRange, start)) {
@@ -270,6 +274,99 @@ BrowserZoom.onZoom.subscribe((offset) => {
 })
 
 //
+
+import * as Search from './search.js'
+import { cellSize } from './global.js'
+import { isFullWidth } from './fullwidth.js'
+
+addEventListener('keydown', (e) => {
+  if (e.ctrlKey && e.key.toLowerCase() === 'f') {
+    e.preventDefault()
+    if (Search.$isOpen()) {
+      Search.open('')
+      return
+    }
+    const selectedText = Grid.readRange(Grid.$selectionRange())
+    Search.open(selectedText)
+  }
+})
+
+Search.$isOpen.subscribe((isOpen) => {
+  if (isOpen) return
+  // Return focus to the grid
+  Keyboard.focus()
+})
+
+Search.$onSearch.subscribe((text) => {
+  const results = Grid.search(text)
+
+  const { x, y } = Grid.$selection().end
+
+  let minDistance = Infinity
+  let closestResultIndex = 0
+
+  for (const [i, r] of results.entries()) {
+    const distance = Math.abs(x - r.x) + Math.abs(y - r.y)
+    if (distance < minDistance) {
+      minDistance = distance
+      closestResultIndex = i
+    }
+  }
+
+  const reorderedResults = [
+    ...results.slice(closestResultIndex),
+    ...results.slice(0, closestResultIndex),
+  ]
+
+  Search.$searchResults.set(reorderedResults)
+})
+
+Search.$highlightedResult.subscribe((result) => {
+  console.log('highlighted result', result)
+  if (!result) return
+  const { x, y, width, height } = result
+  Grid.select({ x, y }, { x: x + width, y: y + height })
+
+  scrollIntoView(result)
+})
+
+const scrollIntoViewPadding = 2 * cellSize.height
+function scrollIntoView(range) {
+  const panOffset = Pan.$offset()
+  const gridPixelDimensions = View.$gridPixelDimensions()
+
+  // Range boundaries
+  const rangeLeft = range.x * cellSize.width
+  const rangeTop = range.y * cellSize.height
+  const rangeRight = rangeLeft + (range.width + 1) * cellSize.width
+  const rangeBottom = rangeTop + (range.height + 1) * cellSize.height
+
+  // Current viewport boundaries
+  const viewportLeft = -panOffset.x
+  const viewportTop = -panOffset.y
+  const viewportRight = viewportLeft + gridPixelDimensions.width
+  const viewportBottom = viewportTop + gridPixelDimensions.height
+
+  // Calculate new panOffset
+  let newViewportX = -panOffset.x
+  let newViewportY = -panOffset.y
+
+  if (rangeLeft < viewportLeft + scrollIntoViewPadding) {
+    newViewportX = rangeLeft - scrollIntoViewPadding
+  } else if (rangeRight > viewportRight - scrollIntoViewPadding) {
+    newViewportX =
+      rangeRight - gridPixelDimensions.width + scrollIntoViewPadding
+  }
+
+  if (rangeTop < viewportTop + scrollIntoViewPadding) {
+    newViewportY = rangeTop - scrollIntoViewPadding
+  } else if (rangeBottom > viewportBottom - scrollIntoViewPadding) {
+    newViewportY =
+      rangeBottom - gridPixelDimensions.height + scrollIntoViewPadding
+  }
+
+  Pan.moveTo({ x: -newViewportX, y: -newViewportY }, true)
+}
 
 //
 //

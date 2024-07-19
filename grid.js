@@ -294,38 +294,130 @@ export function insertText(start, text) {
   return bounds
 }
 
+import { isFullWidth } from './fullwidth.js'
+const isWhitespace = (c) => c.match(/\s/)
+
 // Convert text to {position, value}
 function textToPositionedValues(text) {
   const lines = text.split('\n')
   const positionedValues = []
   for (let y = 0; y < lines.length; y++) {
     const line = lines[y]
-    for (const [x, c] of [...line].entries()) {
-      if (c.match(/\s/)) continue
-      positionedValues.push({ position: { x, y }, value: c })
+    const characters = [...line]
+    let i = 0
+    let x = 0
+    while (i < characters.length) {
+      const char = characters[i]
+      const nextChar = characters[i + 1]
+      const isCharFullWidth = isFullWidth(char)
+
+      if (isWhitespace(char)) {
+        i++
+        if (isCharFullWidth) x += 2
+        else x++
+      } else if (isFullWidth(char)) {
+        positionedValues.push({ position: { x, y }, value: char })
+        i++
+        x += 2
+      } else {
+        positionedValues.push({ position: { x, y }, value: char })
+        i++
+        x++
+      }
     }
   }
   return positionedValues
 }
 
-// Full-width space character
-const defaultTextValue = '\u3000'
+// Full-width space character: '\u3000'
+const defaultTextValue = ' '
 // TODO: sloooow
-function positionedValuesToText(positionedValues) {
+function positionedValuesToText(positionedValues, lookupMap) {
+  lookupMap ??= new Map(
+    positionedValues.map((o) => [`${o.position.x},${o.position.y}`, o]),
+  )
   const bounds = Range.getBoundingRange(
     positionedValues.map(({ position }) => position),
   )
   const lines = []
   for (let y = bounds.y; y < bounds.y + bounds.height + 1; y++) {
     const line = []
-    for (let x = bounds.x; x < bounds.x + bounds.width + 1; x++) {
-      const cell = positionedValues.find(
-        ({ position: { x: px, y: py } }) => x === px && y === py,
-      )
-      console.log(`Checking position (${x}, ${y}):`, cell)
-      line.push(cell ? cell.value : defaultTextValue)
+    for (let x = bounds.x; x < bounds.x + bounds.width + 1; ) {
+      // console.log(`Checking position (${x}, ${y}):`, cell)
+      // const cell = positionedValues.find(
+      //   ({ position: { x: px, y: py } }) => x === px && y === py,
+      // )
+      const cell = lookupMap.get(`${x},${y}`)
+      if (cell) {
+        line.push(cell.value)
+        if (isFullWidth(cell.value)) x += 2
+        else x++
+      } else {
+        line.push(defaultTextValue)
+        x++
+      }
     }
     lines.push(line.join(''))
   }
   return lines.join('\n')
+}
+
+//
+
+const normalizeCharacter = (character) => character.toLowerCase()
+const isSpace = (character) => character === ' '
+
+export function search(text) {
+  const characters = [...text.trim().replace(/\s+/g, ' ')].map(
+    normalizeCharacter,
+  )
+  if (characters.length === 0) return []
+  const firstCharacter = characters[0]
+  const startCells = getCells().filter(
+    (cell) => normalizeCharacter(cell.value) === firstCharacter,
+  )
+
+  // In-place sorting
+  startCells.sort((a, b) => {
+    if (a.position.y === b.position.y) {
+      return a.position.x - b.position.x
+    }
+    return a.position.y - b.position.y
+  })
+
+  if (characters.length === 1) {
+    return startCells.map(({ position }) => ({
+      ...position,
+      width: 0,
+      height: 0,
+    }))
+  }
+
+  return startCells.flatMap(({ position }) => {
+    return [
+      { x: 1, y: 0 }, // Horizontal
+      { x: 0, y: 1 }, // Vertical
+    ].flatMap((direction) => {
+      const match = characters.slice(1).every((character, i) => {
+        const cell = getCellAt(
+          Point.add(position, Point.scale(direction, i + 1)),
+        )
+        // Space character? Expect NO cell
+        if (isSpace(character)) return !cell
+        // Not space: expect a cell
+        if (!cell) return false
+        // Check cell value
+        return normalizeCharacter(cell.value) === character
+      })
+
+      // No match? Skip
+      if (!match) return []
+
+      const { x: width, y: height } = Point.scale(
+        direction,
+        characters.length - 1,
+      )
+      return [{ ...position, width, height }]
+    })
+  })
 }

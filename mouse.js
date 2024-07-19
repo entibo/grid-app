@@ -26,7 +26,21 @@ function stopRight() {
 
 //
 
-addEventListener('pointerdown', (e) => {
+/* addEventListener(
+  'mousedown',
+  (e) => {
+    // Prevents moving focus away from the textarea
+    e.preventDefault()
+    e.stopPropagation()
+  },
+  { passive: false, capture: true },
+) */
+import * as View from './view.js'
+View.gridElement.addEventListener('pointerdown', (e) => {
+  if (e.pointerType === 'touch') return
+
+  e.preventDefault()
+  e.stopPropagation()
   // return
   buttonsState = e.buttons
   if (buttonsState & 1) startLeft(e)
@@ -66,12 +80,6 @@ addEventListener('blur', () => {
 
 addEventListener('contextmenu', (e) => {
   e.preventDefault()
-})
-
-addEventListener('mousedown', (e) => {
-  // Prevents moving focus away from the textarea
-  e.preventDefault()
-  e.stopPropagation()
 })
 
 //

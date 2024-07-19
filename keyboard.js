@@ -19,6 +19,10 @@ import {
 } from './index.js'
 import { isKeyDown, keyDownTime } from './keyboard-global.js'
 
+function space() {
+  moveToNextCell()
+}
+
 function doesCompleteCombo(key, comboKeys, delay = 200) {
   if (!comboKeys.includes(key)) return false
   return comboKeys
@@ -26,28 +30,31 @@ function doesCompleteCombo(key, comboKeys, delay = 200) {
     .every((k) => isKeyDown(k) && keyDownTime(k) < delay)
 }
 
-export const $textarea = document.createElement('textarea')
-$textarea.tabIndex = -1
-document.body.appendChild($textarea)
+export const textareaElement = document.createElement('textarea')
+textareaElement.tabIndex = -1
+document.body.appendChild(textareaElement)
 
 export function setValue(value) {
-  $textarea.value = value
+  textareaElement.value = value
+  if (document.activeElement === textareaElement) {
+    textareaElement.select()
+  }
 }
 
 export function focus() {
-  if (document.activeElement !== $textarea) {
+  if (document.activeElement !== textareaElement) {
     // console.log('Textarea is not in focus')
   }
   // console.log('Giving focus to textarea')
-  $textarea.focus()
-  $textarea.select()
+  textareaElement.focus()
+  textareaElement.select()
 }
 
-$textarea.addEventListener('focus', () => {
-  $textarea.select()
+textareaElement.addEventListener('focus', () => {
+  textareaElement.select()
 })
 
-$textarea.addEventListener(
+textareaElement.addEventListener(
   'blur',
   (e) => {
     console.log('Blur event on textarea')
@@ -55,19 +62,19 @@ $textarea.addEventListener(
   true,
 )
 
-$textarea.addEventListener('compositionstart', (e) => {
+textareaElement.addEventListener('compositionstart', (e) => {
   compositionStateChange('start', e.data)
 })
 
-$textarea.addEventListener('compositionupdate', (e) => {
+textareaElement.addEventListener('compositionupdate', (e) => {
   compositionStateChange('update', e.data)
 })
 
-$textarea.addEventListener('compositionend', (e) => {
+textareaElement.addEventListener('compositionend', (e) => {
   compositionStateChange('end', e.data)
 })
 
-$textarea.addEventListener('input', (e) => {
+textareaElement.addEventListener('input', (e) => {
   console.log('input', JSON.stringify(e.data), e.inputType)
   if (e.isComposing) return
   if (e.inputType === 'deleteContentBackward') return
@@ -75,16 +82,21 @@ $textarea.addEventListener('input', (e) => {
   if (e.inputType === 'insertLineBreak') return
   // if (e.inputType === 'insertCompositionText') return
   if (e.inputType === 'insertFromPaste') {
-    insertText($textarea.value, e.inputType)
+    insertText(textareaElement.value, e.inputType)
     return
   }
   if (e.data === null) return
+
+  if (e.data.match(/^\s+$/)) {
+    space()
+    return
+  }
 
   insertText(e.data, e.inputType)
   focus()
 })
 
-$textarea.addEventListener('keydown', (e) => {
+textareaElement.addEventListener('keydown', (e) => {
   console.log('keydown', e.key)
 
   if (e.ctrlKey && e.key.toLowerCase() === 'z') {
@@ -154,7 +166,7 @@ $textarea.addEventListener('keydown', (e) => {
   if (e.key === ' ') {
     if (!e.ctrlKey) {
       e.preventDefault()
-      eraseForward()
+      space()
       return
     }
   }

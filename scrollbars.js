@@ -1,42 +1,42 @@
-import { signal } from './signal.js'
+// import { signal } from './signal.js'
 
-const $scrollBox = document.createElement('div')
-$scrollBox.className = 'scrollBox'
+// const $scrollBox = document.createElement('div')
+// $scrollBox.className = 'scrollBox'
 
-const $scrollContent = document.createElement('div')
-$scrollContent.className = 'scrollContent'
-$scrollBox.appendChild($scrollContent)
+// const $scrollContent = document.createElement('div')
+// $scrollContent.className = 'scrollContent'
+// $scrollBox.appendChild($scrollContent)
 
-export function mount(parent) {
-  parent.appendChild($scrollBox)
-}
+// export function mount(parent) {
+//   parent.appendChild($scrollBox)
+// }
 
-let isProgrammaticallyScrolling = false
+// let isProgrammaticallyScrolling = false
 
-export function update({ width, height }, scrollOffset) {
-  $scrollContent.style.width = `${width}px`
-  $scrollContent.style.height = `${height}px`
+// export function update({ width, height }, scrollOffset) {
+//   $scrollContent.style.width = `${width}px`
+//   $scrollContent.style.height = `${height}px`
 
-  isProgrammaticallyScrolling = true
-  $scrollBox.scroll({
-    behavior: 'instant',
-    left: scrollOffset.x,
-    top: scrollOffset.y,
-  })
-}
+//   isProgrammaticallyScrolling = true
+//   $scrollBox.scroll({
+//     behavior: 'instant',
+//     left: scrollOffset.x,
+//     top: scrollOffset.y,
+//   })
+// }
 
-export const onScroll = signal()
+// export const onScroll = signal()
 
-$scrollBox.addEventListener('scroll', (e) => {
-  if (isProgrammaticallyScrolling) {
-    isProgrammaticallyScrolling = false
-    return
-  }
+// $scrollBox.addEventListener('scroll', (e) => {
+//   if (isProgrammaticallyScrolling) {
+//     isProgrammaticallyScrolling = false
+//     return
+//   }
 
-  const scrollOffset = {
-    x: $scrollBox.scrollLeft,
-    y: $scrollBox.scrollTop,
-  }
+//   const scrollOffset = {
+//     x: $scrollBox.scrollLeft,
+//     y: $scrollBox.scrollTop,
+//   }
 
-  onScroll.emit(scrollOffset)
-})
+//   onScroll.emit(scrollOffset)
+// })

@@ -13,6 +13,15 @@ export function moveBy(offset, transition = false) {
   }
 }
 
+export function moveTo(offset, transition = false) {
+  if (transition) {
+    stop()
+    targetOffset = offset
+  } else {
+    $offset.set(offset)
+  }
+}
+
 let velocity = { x: 0, y: 0 }
 export function stop() {
   velocity = { x: 0, y: 0 }
