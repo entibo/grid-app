@@ -145,6 +145,18 @@ make it or don't depending or our use case?
 Or do we force and SNAP the selection to guarantee that there
 are no cells partially selected?
 
+# generalize to any width and height?
+
+# how are large elements serialized?
+
+CJK 漢 -> 漢
+2x2 letter X -> X²
+
+I²M²P²O²R²T²A²N²T²
+
+漢²字²
+
+字²
 
 
 # is cell contained in range?
@@ -161,7 +173,7 @@ are no cells partially selected?
 
 #search
 
-- iterates characters in query, using index as x
+- broken: iterates characters in query, using index as x
 - uses getCellAt 
 
 #writeRange 
@@ -183,3 +195,55 @@ are no cells partially selected?
 #moveRangeBy
 
 - Range.contains(position) ...
+
+
+----
+
+Clipboard: large text?
+
+H ホ
+O  
+T テ
+E  
+L ル
+{"size": [[2,2],[10,2]]}
+
+
+----
+
+# Storage
+
+1. Compression?
+2. Error-resilient? accidentally inserting or deleting 1 character should not corrupt the whole document
+3. Human-readable? it should be clear to the user that what is in the URL is no more than the grid content
+
+## Plain
+1. None
+2. OK
+3. OK
+
+## Deflate compression
+1. Best (10x)
+2. A single change will break it 
+3. Random characters
+
+## JSON [[x,y,"c"]]
+1. Bad (1.5x) 
+2. Easy to fix a mistake, but it will still break 
+3. Meh
+
+## Custom: plain, but compress spans of space characters 
+1. OK (5-10x)
+2. OK
+3. OK
+
+\x00 %00 = 1 space (could also just be %20)
+\x01 %01 followed by 1 number character 0-9
+\x02 %02 ...
+
+
+----
+
+Grid pattern: try alternate square cells
+
+----

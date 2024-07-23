@@ -11,21 +11,34 @@ export const $cellUpdated = signal()
 export const $cellRemoved = signal()
 
 // Subscribe to each signal for logging
-$cellCreated.subscribe((cell) => console.log('cellCreated', cell))
-$cellRestored.subscribe((cell) => console.log('cellRestored', cell))
-$cellMoved.subscribe((cell) => console.log('cellMoved', cell))
-$cellUpdated.subscribe((cell) => console.log('cellUpdated', cell))
-$cellRemoved.subscribe((cell) => console.log('cellRemoved', cell))
+// $cellCreated.subscribe((cell) => console.log('cellCreated', cell))
+// $cellRestored.subscribe((cell) => console.log('cellRestored', cell))
+// $cellMoved.subscribe((cell) => console.log('cellMoved', cell))
+// $cellUpdated.subscribe((cell) => console.log('cellUpdated', cell))
+// $cellRemoved.subscribe((cell) => console.log('cellRemoved', cell))
 
 //
 
 const $cellMap = signal(new Map())
+// $cellMap.subscribe((cellMap) => (window.cells = getCells()))
 
-export const $selection = signal({ start: { x: 0, y: 0 }, end: { x: 0, y: 0 } })
-export const $selectionRange = computed([$selection], (selection) => {
-  const { start, end } = selection
-  return Range.fromPoints(start, end)
+export const $rawSelection = signal({
+  start: { x: 0, y: 0 },
+  end: { x: 0, y: 0 },
 })
+
+// Can't cut a multi-cell item in half
+export const $selection = computed([$rawSelection], ({ start, end }) => {
+  const range = getExtendedRange(Range.fromPoints(start, end))
+  const cursorRange = getExtendedRange({
+    ...end,
+    width: 0,
+    height: 0,
+  })
+  return { range, cursorRange }
+})
+
+//
 
 export const $contentRange = signal({ x: 0, y: 0, width: 0, height: 0 })
 function updateContentRange(cellMap) {
@@ -37,7 +50,7 @@ $cellMap.subscribe(debounce(updateContentRange, 0))
 export function getGrid() {
   return {
     cellMap: $cellMap(),
-    selection: $selection(),
+    selection: $rawSelection(),
   }
 }
 export function setGrid({ selection, cellMap }) {
@@ -56,7 +69,7 @@ export function setGrid({ selection, cellMap }) {
     $cellRemoved.emit(cell)
   }
 
-  $selection.set(selection)
+  $rawSelection.set(selection)
 }
 
 function newCell(position, value) {
@@ -65,17 +78,19 @@ function newCell(position, value) {
 
 // Selection
 
+class Selection {}
+
 export function select(start, end = start) {
-  $selection.set({ start, end })
+  $rawSelection.set({ start, end })
 }
 export function selectTo(end) {
-  $selection.update(({ start }) => {
+  $rawSelection.update(({ start }) => {
     return { start, end }
   })
 }
 
 export function clearSelection() {
-  $selection.update(({ end }) => {
+  $rawSelection.update(({ end }) => {
     return { start: end, end }
   })
 }
@@ -99,10 +114,11 @@ function setCells(cells) {
 }
 
 export function readRange(range) {
-  const cells = getCells().filter((cell) =>
-    Range.contains(range, cell.position),
-  )
-  return positionedValuesToText(cells)
+  const cells = getCells().filter((cell) => rangeContainsCell(range, cell))
+  // Todo: this is the only call to cellsToText
+  // which needs a. cells, b. lookup map, c. bounding range
+  // all 3 of which we have, sort of through [cells, $cellMap(), range]
+  return cellsToText(cells)
 }
 
 //
@@ -123,7 +139,7 @@ export function writeRange(range, pseudoCells) {
   const removedCells = []
 
   for (const cell of getCells()) {
-    if (!Range.contains(range, cell.position)) {
+    if (!rangeContainsCell(range, cell)) {
       untouchedCells.push(cell)
       continue
     }
@@ -159,7 +175,7 @@ export function removeRange(range) {
 
   setCells(
     getCells().filter((cell) => {
-      if (!Range.contains(range, cell.position)) return true
+      if (!rangeContainsCell(range, cell)) return true
       removedCells.push(cell)
       return false
     }),
@@ -170,75 +186,47 @@ export function removeRange(range) {
 }
 
 export function displaceRangeBy(range, offset) {
-  const displacement = (() => {
-    if (offset.x === -1) {
-      return {
-        range: {
-          ...range,
-          x: range.x - 1,
-          width: 0,
-        },
-        offset: {
-          x: range.width + 1,
-          y: 0,
-        },
-      }
-    }
-    if (offset.x === 1) {
-      return {
-        range: {
-          ...range,
-          x: range.x + range.width + 1,
-          width: 0,
-        },
-        offset: {
-          x: -range.width - 1,
-          y: 0,
-        },
-      }
-    }
-    if (offset.y === -1) {
-      return {
-        range: {
-          ...range,
-          y: range.y - 1,
-          height: 0,
-        },
-        offset: {
-          x: 0,
-          y: range.height + 1,
-        },
-      }
-    }
-    if (offset.y === 1) {
-      return {
-        range: {
-          ...range,
-          y: range.y + range.height + 1,
-          height: 0,
-        },
-        offset: {
-          x: 0,
-          y: -range.height - 1,
-        },
-      }
-    }
-    throw 'error'
-  })()
+  const otherRange = getExtendedRange({
+    ...Range.getAdjacentPosition(range, offset),
+    width: offset.x ? 0 : range.width,
+    height: offset.y ? 0 : range.height,
+  })
 
-  function getNewPosition(point) {
-    if (Range.contains(range, point)) {
-      return Point.add(point, offset)
+  // there be bugs
+  const extendedRange = getExtendedRange(
+    Range.getBoundingRange([range, otherRange]),
+  )
+
+  const rangeOffset = Point.scale(
+    {
+      x: otherRange.width + 1,
+      y: otherRange.height + 1,
+    },
+    offset,
+  )
+  const otherRangeOffset = Point.scale(
+    {
+      x: range.width + 1,
+      y: range.height + 1,
+    },
+    Point.scale(offset, -1),
+  )
+
+  function getNewPosition(cell) {
+    if (rangeContainsCell(otherRange, cell)) {
+      return Point.add(cell.position, otherRangeOffset)
     }
-    if (Range.contains(displacement.range, point)) {
-      return Point.add(point, displacement.offset)
+
+    if (rangeContainsCell(extendedRange, cell)) {
+      return Point.add(cell.position, rangeOffset)
     }
+
     return null
   }
 
   setCells(
     getCells().map((cell) => {
-      const newPosition = getNewPosition(cell.position)
+      const newPosition = getNewPosition(cell)
       if (!newPosition) return cell
 
       const movedCell = { ...cell, position: newPosition }
@@ -246,6 +234,8 @@ export function displaceRangeBy(range, offset) {
       return movedCell
     }),
   )
+
+  return rangeOffset
 }
 
 export function moveRangeBy(range, offset, removeOverlap = true) {
@@ -257,15 +247,15 @@ export function moveRangeBy(range, offset, removeOverlap = true) {
     const [removedCells, remainingCells] = partition(
       cells,
       (cell) =>
-        Range.contains(targetRange, cell.position) &&
-        !Range.contains(range, cell.position),
+        rangeContainsCell(targetRange, cell, false) &&
+        !rangeContainsCell(range, cell),
     )
     removedCells.forEach($cellRemoved.emit)
     cells = remainingCells
   }
 
   cells = cells.map((cell) => {
-    if (!Range.contains(range, cell.position)) return cell
+    if (!rangeContainsCell(range, cell)) return cell
     const movedCell = { ...cell, position: Point.add(cell.position, offset) }
     $cellMoved.emit(movedCell, cell)
     return movedCell
@@ -274,56 +264,110 @@ export function moveRangeBy(range, offset, removeOverlap = true) {
   setCells(cells)
 }
 
-//
+function getInlineLength(position) {
+  let x = position.x
+  for (let emptyCount = 0; emptyCount < 3; ) {
+    const cell = getCellAt({ x, y: position.y })
+    if (cell) {
+      emptyCount = 0
+      x += cell.value.width
+    } else {
+      emptyCount++
+      x++
+    }
+  }
+  return x - 1
+}
 
-export function insertText(start, text) {
-  console.log('INSERT TEXT', start.x, start.y, text)
+export const $paragraphRange = computed(
+  [$selection],
+  ({ range: selectionRange }) => {
+    const right = getInlineLength({
+      x: selectionRange.x + selectionRange.width,
+      y: selectionRange.y,
+    })
+    return {
+      ...selectionRange,
+      width: right - selectionRange.x,
+    }
+  },
+)
 
-  const positionedValues = textToPositionedValues(text).map(
-    ({ position, value }) => ({
-      position: Point.add(position, start),
-      value,
+export function push(position, direction) {
+  const endX = getInlineLength(position)
+  console.log('push from', position.x, endX)
+  setCells(
+    getCells().map((cell) => {
+      if (cell.position.y !== position.y) return cell
+      if (cell.position.x < position.x || cell.position.x > endX) return cell
+
+      const newPosition = Point.add(cell.position, { x: 1, y: 0 })
+
+      const movedCell = { ...cell, position: newPosition }
+      $cellMoved.emit(movedCell, cell)
+      return movedCell
     }),
   )
+}
 
-  if (!positionedValues.length) return
+//
+
+export function overwriteText(start, text) {
+  console.log('INSERT TEXT', start.x, start.y, text)
+
+  const pseudoCells = textToCells(text).map(({ position, value }) => ({
+    position: Point.add(position, start),
+    value,
+  }))
+
+  if (!pseudoCells.length) return
   const bounds = Range.getBoundingRange(
-    positionedValues.map(({ position }) => position),
+    pseudoCells.map(({ position }) => position),
   )
-  writeRange(bounds, positionedValues)
+  writeRange(bounds, pseudoCells)
   return bounds
 }
 
 import { isFullWidth } from './fullwidth.js'
 const isWhitespace = (c) => c.match(/\s/)
 
+//
+
+export function rangeContainsCell(range, cell, fully = true) {
+  if (cell.value.width === 2) {
+    if (fully)
+      return (
+        Range.contains(range, cell.position) &&
+        Range.contains(range, Point.add(cell.position, { x: 1, y: 0 }))
+      )
+    else
+      return (
+        Range.contains(range, cell.position) ||
+        Range.contains(range, Point.add(cell.position, { x: 1, y: 0 }))
+      )
+  }
+  return Range.contains(range, cell.position)
+}
+
 // Convert text to {position, value}
-function textToPositionedValues(text) {
+function textToCells(text) {
   const lines = text.split('\n')
   const positionedValues = []
   for (let y = 0; y < lines.length; y++) {
     const line = lines[y]
     const characters = [...line]
-    let i = 0
-    let x = 0
-    while (i < characters.length) {
-      const char = characters[i]
-      const nextChar = characters[i + 1]
-      const isCharFullWidth = isFullWidth(char)
 
-      if (isWhitespace(char)) {
-        i++
-        if (isCharFullWidth) x += 2
-        else x++
-      } else if (isFullWidth(char)) {
-        positionedValues.push({ position: { x, y }, value: char })
-        i++
-        x += 2
-      } else {
-        positionedValues.push({ position: { x, y }, value: char })
-        i++
-        x++
+    let x = 0
+    for (let i = 0; i < characters.length; i++) {
+      const text = characters[i]
+      const position = { x, y }
+      const width = isFullWidth(text) ? 2 : 1
+
+      if (!isWhitespace(text)) {
+        positionedValues.push({ position, value: { text, width } })
       }
+
+      x += width
     }
   }
   return positionedValues
@@ -331,33 +375,25 @@ function textToPositionedValues(text) {
 
 // Full-width space character: '\u3000'
 const defaultTextValue = ' '
-// TODO: sloooow
-function positionedValuesToText(positionedValues, lookupMap) {
+function cellsToText(cells, lookupMap) {
   lookupMap ??= new Map(
-    positionedValues.map((o) => [`${o.position.x},${o.position.y}`, o]),
+    cells.map((o) => [`${o.position.x},${o.position.y}`, o]),
   )
-  const bounds = Range.getBoundingRange(
-    positionedValues.map(({ position }) => position),
-  )
+  const bounds = Range.getBoundingRange(cells.map(({ position }) => position))
   const lines = []
   for (let y = bounds.y; y < bounds.y + bounds.height + 1; y++) {
     const line = []
     for (let x = bounds.x; x < bounds.x + bounds.width + 1; ) {
-      // console.log(`Checking position (${x}, ${y}):`, cell)
-      // const cell = positionedValues.find(
-      //   ({ position: { x: px, y: py } }) => x === px && y === py,
-      // )
       const cell = lookupMap.get(`${x},${y}`)
       if (cell) {
-        line.push(cell.value)
-        if (isFullWidth(cell.value)) x += 2
-        else x++
+        line.push(cell.value.text)
+        x += cell.value.width
       } else {
         line.push(defaultTextValue)
         x++
       }
     }
-    lines.push(line.join(''))
+    lines.push(line.join('').trimEnd())
   }
   return lines.join('\n')
 }
@@ -374,7 +410,7 @@ export function search(text) {
   if (characters.length === 0) return []
   const firstCharacter = characters[0]
   const startCells = getCells().filter(
-    (cell) => normalizeCharacter(cell.value) === firstCharacter,
+    (cell) => normalizeCharacter(cell.value.text) === firstCharacter,
   )
 
   // In-place sorting
@@ -407,7 +443,7 @@ export function search(text) {
         // Not space: expect a cell
         if (!cell) return false
         // Check cell value
-        return normalizeCharacter(cell.value) === character
+        return normalizeCharacter(cell.value.text) === character
       })
 
       // No match? Skip
@@ -420,4 +456,45 @@ export function search(text) {
       return [{ ...position, width, height }]
     })
   })
+}
+
+//
+
+// Ensure that items larger than 1x1
+// are fully contained in the range
+function getExtendedRange(range) {
+  let minLeft = range.x
+  let minRight = range.x + range.width
+
+  const cells = getCells()
+  let didExpand = false
+  do {
+    didExpand = false
+    for (const cell of cells) {
+      const { x, y } = cell.position
+      if (y < range.y || y > range.y + range.height) continue
+      const { width } = cell.value
+      if (width === 1) continue
+
+      const cellLeft = x
+      const cellRight = x + 1
+
+      if (cellLeft === minLeft - 1) {
+        minLeft = cellLeft
+        didExpand = true
+      }
+
+      if (cellRight === minRight + 1) {
+        minRight = cellRight
+        didExpand = true
+      }
+    }
+  } while (didExpand)
+
+  return {
+    x: minLeft,
+    y: range.y,
+    width: minRight - minLeft,
+    height: range.height,
+  }
 }

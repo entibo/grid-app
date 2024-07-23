@@ -6,7 +6,8 @@ import {
   $cellRestored,
   $cellUpdated,
   $contentRange,
-  $selectionRange,
+  $paragraphRange,
+  $selection,
 } from './grid.js'
 import { textareaElement } from './keyboard.js'
 import * as Point from './point.js'
@@ -78,7 +79,7 @@ cellsElement.className = 'cells'
 originElement.appendChild(cellsElement)
 
 const cursorElement = document.createElement('div')
-cursorElement.className = 'cursor'
+cursorElement.className = 'range cursor'
 originElement.appendChild(cursorElement)
 
 const dashedRangeElement = document.createElement('div')
@@ -102,6 +103,27 @@ originElement.appendChild(inputRangeElement)
 const selectionRangeElement = document.createElement('div')
 selectionRangeElement.className = 'range selectionRange'
 originElement.appendChild(selectionRangeElement)
+
+//
+
+const paragraphRangeElement = document.createElement('div')
+paragraphRangeElement.className = 'range paragraphRange'
+originElement.appendChild(paragraphRangeElement)
+$paragraphRange.subscribe((range) => {
+  console.log('paragraphRange', range)
+  setGridPosition(paragraphRangeElement, range)
+  setGridDimensions(paragraphRangeElement, range)
+})
+
+//
+
+$selection.subscribe(({ range, cursorRange }) => {
+  setGridPosition(cursorElement, cursorRange)
+  setGridDimensions(cursorElement, cursorRange)
+
+  setGridPosition(selectionRangeElement, range)
+  setGridDimensions(selectionRangeElement, range)
+})
 
 //
 
@@ -155,26 +177,12 @@ function setGridPosition(el, point) {
   setPosition(el, Point.scale(point, cellSize))
 }
 
-function setDimensions(el, { width, height }) {
+function setGridDimensions(el, { width, height }) {
   el.style.width = `${(width + 1) * cellSize.width}px`
   el.style.height = `${(height + 1) * cellSize.height}px`
 }
 
 //
-import * as Range from './range.js'
-
-// Positive offset representing by how much the content
-// sticks out from 0,0 into negative coordinates
-const $topLeftContentOffset = computed(
-  [$selectionRange, $contentRange],
-  (selectionRange, contentRange) => {
-    return Point.scale(
-      // Range.getBoundingRange([selectionRange, contentRange]),
-      contentRange,
-      cellSize,
-    )
-  },
-)
 
 let didScroll = false
 let scrollReference = { x: 0, y: 0 }
@@ -255,13 +263,18 @@ scrollBoxElement.addEventListener('scroll', (e) => {
 
 //
 
+function setCellValue(el, { text, width }) {
+  el.textContent = text
+  el.classList.toggle('wide', width === 2)
+}
+
 $cellCreated.subscribe(({ id, value, position }) => {
   const el = document.createElement('div')
   el.className = 'cell'
   cellsElement.appendChild(el)
 
   setGridPosition(el, position)
-  el.textContent = value
+  setCellValue(el, value)
 
   cellIdToElementMap.set(id, el)
 })
@@ -271,17 +284,18 @@ $cellCreated.subscribe(({ id, value, position }) => {
 // with this id in the past
 $cellRestored.subscribe(({ id, value, position }) => {
   const el = cellIdToElementMap.get(id)
+
   if (!el.isConnected) {
     cellsElement.appendChild(el)
   }
 
+  setCellValue(el, value)
   setGridPosition(el, position)
-  el.textContent = value
 })
 
 $cellUpdated.subscribe(({ id, value }) => {
   const el = cellIdToElementMap.get(id)
-  el.textContent = value
+  setCellValue(el, value)
 })
 
 $cellMoved.subscribe(({ id, position }) => {
@@ -311,7 +325,7 @@ export function hideCursor() {
 export function showSelectionRange(range) {
   showElement(selectionRangeElement)
   setGridPosition(selectionRangeElement, range)
-  setDimensions(selectionRangeElement, range)
+  setGridDimensions(selectionRangeElement, range)
 }
 
 export function hideSelectionRange() {
@@ -323,7 +337,7 @@ export function hideSelectionRange() {
 export function showDashedRange(range) {
   showElement(dashedRangeElement)
   setGridPosition(dashedRangeElement, range)
-  setDimensions(dashedRangeElement, range)
+  setGridDimensions(dashedRangeElement, range)
 }
 
 export function hideDashedRange() {
@@ -336,7 +350,7 @@ export function showInputRange({ x, y }) {
   const range = { x, y, width: 0, height: 0 }
   inputRangeElement.style.display = 'flex'
   setGridPosition(inputRangeElement, range)
-  setDimensions(inputRangeElement, range)
+  setGridDimensions(inputRangeElement, range)
 
   // Move the text area so that IME can show up in the right place
   const rect = inputRangeElement.getBoundingClientRect()
@@ -362,10 +376,10 @@ export function updateInputRange({ x, y }, compositionText) {
   }
   inputRangeElement.style.display = 'flex'
   setGridPosition(inputRangeElement, range)
-  setDimensions(inputRangeElement, range)
+  setGridDimensions(inputRangeElement, range)
 }
 
 export function hideInputRange() {
   hideElement(inputRangeElement)
-  setDimensions(cursorElement, { width: 0, height: 0 })
+  setGridDimensions(cursorElement, { width: 0, height: 0 })
 }

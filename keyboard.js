@@ -9,7 +9,7 @@ import {
   moveCursor,
   moveCursorAndDisplace,
   moveCursorAndSelect,
-  moveToNextCell,
+  spacebar,
   moveToNextLine,
   redo,
   selectAll,
@@ -20,7 +20,7 @@ import {
 import { isKeyDown, keyDownTime } from './keyboard-global.js'
 
 function space() {
-  moveToNextCell()
+  spacebar()
 }
 
 function doesCompleteCombo(key, comboKeys, delay = 200) {
@@ -159,7 +159,7 @@ textareaElement.addEventListener('keydown', (e) => {
 
   if (e.key === 'Tab') {
     e.preventDefault()
-    moveToNextCell()
+    spacebar()
     return
   }
 

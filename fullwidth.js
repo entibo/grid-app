@@ -159,3 +159,4 @@ export function isFullWidth(character) {
 }
 
 window.isFullWidth = isFullWidth
+

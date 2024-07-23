@@ -6,16 +6,11 @@ import * as Mouse from './mouse.js'
 import * as Pan from './pan.js'
 import * as Point from './point.js'
 import * as Range from './range.js'
-import { readHash, writeHash } from './storage.js'
+import * as Storage from './storage.js'
 import { debounce } from './util.js'
 import * as View from './view.js'
 
-Grid.$selection.subscribe(({ end }) => {
-  View.showCursor(end)
-  // Keyboard.focus()
-})
-
-Grid.$selectionRange.subscribe((selectionRange) => {
+Grid.$selection.subscribe(({ range: selectionRange }) => {
   if (true || selectionRange.width > 0 || selectionRange.height > 0) {
     View.showSelectionRange(selectionRange)
   } else {
@@ -32,7 +27,7 @@ Grid.$selectionRange.subscribe((selectionRange) => {
 const save = debounce(() => {
   const text = Grid.readRange(Grid.$contentRange())
   document.title = text.match(/^\S{1,20}/)?.[0] || 'Empty grid'
-  writeHash(text)
+  Storage.save(text)
 }, 100)
 
 export function checkpoint() {
@@ -56,9 +51,9 @@ export function redo() {
 
 // Init
 setTimeout(async () => {
-  const text = await readHash()
+  const text = await Storage.load()
   if (text) {
-    Grid.insertText({ x: 0, y: 0 }, text)
+    Grid.overwriteText({ x: 0, y: 0 }, text)
   }
   checkpoint()
 })
@@ -68,7 +63,7 @@ setTimeout(async () => {
 export function copy() {}
 
 export function cut() {
-  const selectionRange = Grid.$selectionRange()
+  const selectionRange = Grid.$selection().range
   Grid.removeRange(selectionRange)
   checkpoint()
   // Keyboard.focus()
@@ -77,7 +72,7 @@ export function cut() {
 //
 
 export function selectColumn() {
-  const { start, end } = Grid.$selection()
+  const { start, end } = Grid.$rawSelection()
   const contentRange = Grid.$contentRange()
 
   const top = contentRange.y
@@ -97,7 +92,7 @@ export function selectColumn() {
 }
 
 export function selectRow() {
-  const { start, end } = Grid.$selection()
+  const { start, end } = Grid.$rawSelection()
   const contentRange = Grid.$contentRange()
 
   const left = contentRange.x
@@ -126,7 +121,7 @@ export function clearSelection() {
 }
 
 export function compositionStateChange(compositionState, compositionText) {
-  const selectionRange = Grid.$selectionRange()
+  const selectionRange = Grid.$selection().range
 
   if (compositionState === 'start') {
     View.showInputRange(selectionRange)
@@ -147,7 +142,7 @@ export function compositionStateChange(compositionState, compositionText) {
     console.log('composition end')
     // Grid.setCursorAndSelectionStart(compositionStart)
     View.hideInputRange()
-    View.showCursor(Grid.$selection().end)
+    View.showCursor(Grid.$rawSelection().end)
     View.showSelectionRange(selectionRange)
   }
 }
@@ -155,10 +150,30 @@ export function compositionStateChange(compositionState, compositionText) {
 export function insertText(text, type) {
   console.log('insertText', text, type)
 
-  const selectionRange = Grid.$selectionRange()
+  if (text.match(/\n/)) {
+    overwriteText(text)
+    return
+  }
+
+  const cursorRange = Grid.$selection().cursorRange
+
+  for (let i = 0; i < text.length; i++) {
+    Grid.push({
+      x: cursorRange.x + i,
+      y: cursorRange.y,
+    })
+  }
+
+  overwriteText(text)
+}
+
+export function overwriteText(text) {
+  console.log('overwriteText', text)
+
+  const selectionRange = Grid.$selection().range
   const removed = Grid.removeRange(selectionRange)
 
-  const bounds = Grid.insertText(selectionRange, text)
+  const bounds = Grid.overwriteText(selectionRange, text)
 
   if (bounds) {
     Grid.select(Point.add(Range.bottomRight(bounds), { x: 1, y: 0 }))
@@ -168,26 +183,33 @@ export function insertText(text, type) {
 }
 
 export function moveCursor(offset) {
-  // Grid.clearSelection()
-  // moveSelectionBy(offset)
-  const { end } = Grid.$selection()
-  Grid.select(Point.add(end, offset))
+  const rawCursorPosition = Grid.$rawSelection().end
+  const { range: selectionRange } = Grid.$selection()
+  // Grid.select(Range.getAdjacentPosition(cursorRange, offset))
+  Grid.select(
+    Range.getAdjacentPosition(selectionRange, offset, rawCursorPosition),
+  )
 }
 
 export function moveCursorAndSelect(offset) {
-  const { end } = Grid.$selection()
-  Grid.selectTo(Point.add(end, offset))
+  const rawCursorPosition = Grid.$rawSelection().end
+  const { cursorRange } = Grid.$selection()
+  // Grid.selectTo(Range.getAdjacentPosition(cursorRange, offset))
+  Grid.selectTo(
+    Range.getAdjacentPosition(cursorRange, offset, rawCursorPosition),
+  )
 }
 
 export function moveCursorAndDisplace(offset) {
-  const selectionRange = Grid.$selectionRange()
-  Grid.displaceRangeBy(selectionRange, offset)
-  moveSelectionBy(offset)
+  const selectionRange = Grid.$selection().range
+  // Todo: check width
+  const displacementOffset = Grid.displaceRangeBy(selectionRange, offset)
+  moveSelectionBy(displacementOffset)
   checkpoint()
 }
 
 function moveSelectionBy(offset) {
-  Grid.$selection.update(({ start, end }) => {
+  Grid.$rawSelection.update(({ start, end }) => {
     return {
       start: Point.add(start, offset),
       end: Point.add(end, offset),
@@ -195,17 +217,41 @@ function moveSelectionBy(offset) {
   })
 }
 
-export function moveToNextCell() {
+export function spacebar() {
+  const rawCursorPosition = Grid.$rawSelection().end
+  Grid.push(rawCursorPosition)
   moveCursor({ x: 1, y: 0 })
+  checkpoint()
 }
 export function moveToNextLine() {
   moveCursor({ x: 0, y: 1 })
 }
 
+//
+
+function push(position, direction) {
+  // direction is assumed "right"
+}
+
+//
+
 export function eraseBackward(isWord) {
-  console.log('eraseBackward', isWord)
-  const selectionRange = Grid.$selectionRange()
-  // TODO: check width
+  console.log('eraseBackward')
+  const selectionRange = Grid.$selection().range
+  if (selectionRange.width > 0 || selectionRange.height > 0) {
+    // const removed = Grid.removeRange(selectionRange)
+    // if (removed) checkpoint()
+    return
+  }
+
+  Grid.moveRangeBy(Grid.$paragraphRange(), { x: -1, y: 0 })
+  moveCursor({ x: -1, y: 0 })
+  checkpoint()
+}
+
+export function eraseRange() {
+  console.log('eraseRange')
+  const selectionRange = Grid.$selection().range
   const removed = Grid.removeRange(selectionRange)
   moveCursor({ x: -1, y: 0 })
   if (removed) checkpoint()
@@ -213,7 +259,7 @@ export function eraseBackward(isWord) {
 
 export function eraseForward(isWord) {
   console.log('eraseForward', isWord)
-  const selectionRange = Grid.$selectionRange()
+  const selectionRange = Grid.$selection().range
   const removed = Grid.removeRange(selectionRange)
   moveCursor({ x: +1, y: 0 })
   if (removed) checkpoint()
@@ -225,7 +271,7 @@ export function leftClickStart(screen, shiftKey) {
   console.log('leftClickStart', screen, shiftKey)
   Keyboard.focus()
   const start = View.screenToGrid(screen)
-  const selectionRange = Grid.$selectionRange()
+  const selectionRange = Grid.$selection().range
   if (selectionRange && Range.contains(selectionRange, start)) {
     View.showDashedRange(selectionRange)
     return {
@@ -239,7 +285,7 @@ export function leftClickStart(screen, shiftKey) {
         View.hideDashedRange()
         const offset = Point.sub(position, start)
         if (offset.x === 0 && offset.y === 0) return
-        const selectionRange = Grid.$selectionRange()
+        const selectionRange = Grid.$selection().range
         Grid.moveRangeBy(selectionRange, offset)
         moveSelectionBy(offset)
         checkpoint()
@@ -286,7 +332,9 @@ addEventListener('keydown', (e) => {
       Search.open('')
       return
     }
-    const selectedText = Grid.readRange(Grid.$selectionRange())
+    // TODO: selected text should be read once when selection is made
+    const selectionRange = Grid.$selection().range
+    const selectedText = Grid.readRange(selectionRange)
     Search.open(selectedText)
   }
 })
@@ -300,7 +348,8 @@ Search.$isOpen.subscribe((isOpen) => {
 Search.$onSearch.subscribe((text) => {
   const results = Grid.search(text)
 
-  const { x, y } = Grid.$selection().end
+  // Reorder results so that the closest match is first
+  const { x, y } = Grid.$rawSelection().end
 
   let minDistance = Infinity
   let closestResultIndex = 0

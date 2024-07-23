@@ -104,7 +104,8 @@ textarea {
   cursor: grab;
 }
 
-.range.dashedRange {
+.range.dashedRange,
+.range.paragraphRange {
   pointer-events: none;
   outline: 2px dashed blueviolet;
 }

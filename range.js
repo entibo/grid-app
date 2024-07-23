@@ -54,6 +54,33 @@ export function getBoundingRange(pointsAndRanges) {
   }
 }
 
+//
+
+export function getAdjacentPosition(range, offset, referencePosition = range) {
+  const left = range.x
+  const top = range.y
+  const right = range.x + range.width
+  const bottom = range.y + range.height
+
+  let x = referencePosition.x
+  if (offset.x > 0) {
+    x = right + offset.x
+  } else if (offset.x < 0) {
+    x = left + offset.x
+  }
+
+  let y = referencePosition.y
+  if (offset.y > 0) {
+    y = bottom + offset.y
+  } else if (offset.y < 0) {
+    y = top + offset.y
+  }
+
+  return { x, y }
+}
+
+// Corner stuff
+
 export const TOP_LEFT = 'top-left'
 export const TOP_RIGHT = 'top-right'
 export const BOTTOM_LEFT = 'bottom-left'
