@@ -11,13 +11,14 @@ export function signal(initialValue) {
 
   get.get = get
 
-  get.subscribe = (callback) => {
+  get.subscribe = (callback, immediate = false) => {
     callbacks.push(callback)
     const unsubscribe = () => {
       const index = callbacks.indexOf(callback)
       if (index === -1) return
       callbacks.splice(index, 1)
     }
+    if (immediate) callback(currentValue)
     return unsubscribe
   }
 

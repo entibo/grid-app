@@ -53,16 +53,34 @@ new ResizeObserver(() => {
 const gridBackgroundElement = document.createElement('div')
 gridBackgroundElement.innerHTML = `<svg width="100%" height="100%">
   <defs>
-    <pattern id="gridPattern" width="${cellSize.width}" height="${cellSize.height}" patternUnits="userSpaceOnUse">
-      <path d="M ${cellSize.width} 0 L 0 0 0 ${cellSize.height}"
+    <pattern patternUnits="userSpaceOnUse"
+             id="gridPattern" 
+             width="${cellSize.width * 2}" 
+             height="${cellSize.height * 2}"
+             viewBox="0 0 4 8">
+      <path d="M 1 0 L 1 3
+               M 0 3 L 4 3
+               M 3 3 L 3 7
+               M 0 7 L 4 7
+               M 1 7 L 1 8
+              "
             stroke="var(--grid-lines-color)" 
-            stroke-width="1" 
+            stroke-width="${0.1 / devicePixelRatio}" 
+            -shape-rendering="crispEdges"
             fill="none"/>
     </pattern>
   </defs>
   <rect width="100%" height="100%" fill="url(#gridPattern)" />
-  </svg>`
+</svg>`
 const gridPatternElement = gridBackgroundElement.querySelector('pattern')
+Pan.$offset.subscribe(({ x, y }) => {
+  const w = cellSize.width * 2
+  const h = cellSize.height * 2
+  gridPatternElement.setAttribute(
+    'patternTransform',
+    `translate(${x - w / 4} ${y + h / 8})`,
+  )
+}, true)
 gridBackgroundElement.className = 'gridBackground'
 gridElement.appendChild(gridBackgroundElement)
 
@@ -108,14 +126,14 @@ originElement.appendChild(selectionRangeElement)
 
 const paragraphRangeElement = document.createElement('div')
 paragraphRangeElement.className = 'range paragraphRange'
-originElement.appendChild(paragraphRangeElement)
+// originElement.appendChild(paragraphRangeElement)
 $paragraphRange.subscribe((range) => {
-  console.log('paragraphRange', range)
+  // console.log('paragraphRange', range)
   setGridPosition(paragraphRangeElement, range)
   setGridDimensions(paragraphRangeElement, range)
 })
 
-//
+//                                                             
 
 $selection.subscribe(({ range, cursorRange }) => {
   setGridPosition(cursorElement, cursorRange)
@@ -191,13 +209,6 @@ computed(
   [Pan.$offset, $contentRange, $gridPixelDimensions],
   (panOffset, contentRange, gridPixelDimensions) => {
     // console.log(panOffset, contentRange, gridPixelDimensions)
-
-    gridPatternElement.setAttribute(
-      'patternTransform',
-      `translate(${panOffset.x % cellSize.width} ${
-        panOffset.y % cellSize.height
-      })`,
-    )
 
     if (panOffset.fromScrollEvent) return
 

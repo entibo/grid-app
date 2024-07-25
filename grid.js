@@ -78,8 +78,6 @@ function newCell(position, value) {
 
 // Selection
 
-class Selection {}
-
 export function select(start, end = start) {
   $rawSelection.set({ start, end })
 }
@@ -370,7 +368,7 @@ function textToCells(text) {
       x += width
     }
   }
-  return positionedValues
+  return positionedValues 
 }
 
 // Full-width space character: '\u3000'
@@ -496,5 +494,13 @@ function getExtendedRange(range) {
     y: range.y,
     width: minRight - minLeft,
     height: range.height,
+  }
+}
+
+function squareGrided(range) {
+  return {
+    ...range,
+    x: Math.floor(range.x / 2) * 2,
+    width: Math.ceil((range.width + 1) / 2) * 2 - 1,
   }
 }

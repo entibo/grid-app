@@ -1,6 +1,6 @@
 :root {
   --grid-bg-color: #f0f0f0;
-  --grid-lines-color: rgb(233, 230, 229);
+  --grid-lines-color: rgb(224, 220, 219);
 }
 
 * {
@@ -13,7 +13,7 @@ body {
   padding: 0;
   overflow: hidden;
 
-  font-family: monospace;
+  font-family: Inconsolata, monospace;
   font-size: var(--cell-height);
 }
 
