@@ -1,5 +1,5 @@
 import { leftClickStart, rightClickStart } from './index.js'
-import { signal } from './signal.js'
+import { emitter } from './emitter.js'
 
 const BUTTON_LEFT = 0
 const BUTTON_RIGHT = 2
@@ -13,7 +13,7 @@ function startLeft(e) {
   left = leftClickStart({ x: e.clientX, y: e.clientY }, e.shiftKey)
 }
 function startRight(e) {
-  right = rightClickStart({ x: e.clientX, y: e.clientY }, e.ctrlKey)
+  right = rightClickStart({ x: e.clientX, y: e.clientY }, e.shiftKey)
 }
 function stopLeft() {
   left?.end?.(lastPosition)
@@ -84,7 +84,7 @@ addEventListener('contextmenu', (e) => {
 
 //
 
-export const onScroll = signal()
+export const onScroll = emitter()
 
 addEventListener(
   'wheel',

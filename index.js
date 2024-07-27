@@ -10,13 +10,14 @@ import * as Storage from './storage.js'
 import { debounce } from './util.js'
 import * as View from './view.js'
 
-Grid.$selection.subscribe(({ range: selectionRange }) => {
+Grid.$selection.subscribe((selectionRange) => {
   if (true || selectionRange.width > 0 || selectionRange.height > 0) {
     View.showSelectionRange(selectionRange)
   } else {
     View.hideSelectionRange()
   }
 
+  // TODO
   const text = Grid.readRange(selectionRange)
   Keyboard.setValue(text)
   // Keyboard.focus()
@@ -25,7 +26,7 @@ Grid.$selection.subscribe(({ range: selectionRange }) => {
 //
 
 const save = debounce(() => {
-  const text = Grid.readRange(Grid.$contentRange())
+  const text = Grid.readRange(/* contentRange */)
   document.title = text.match(/^\S{1,20}/)?.[0] || 'Empty grid'
   Storage.save(text)
 }, 100)
@@ -63,8 +64,7 @@ setTimeout(async () => {
 export function copy() {}
 
 export function cut() {
-  const selectionRange = Grid.$selection().range
-  Grid.removeRange(selectionRange)
+  Grid.removeRange(Grid.$selectionRange.value)
   checkpoint()
   // Keyboard.focus()
 }
@@ -72,8 +72,8 @@ export function cut() {
 //
 
 export function selectColumn() {
-  const { start, end } = Grid.$rawSelection()
-  const contentRange = Grid.$contentRange()
+  const { start, end } = Grid.$selection
+  const contentRange = Grid.$contentRange.value
 
   const top = contentRange.y
   const bottom = contentRange.y + contentRange.height
@@ -92,8 +92,8 @@ export function selectColumn() {
 }
 
 export function selectRow() {
-  const { start, end } = Grid.$rawSelection()
-  const contentRange = Grid.$contentRange()
+  const { start, end } = Grid.$selection
+  const contentRange = Grid.$contentRange.value
 
   const left = contentRange.x
   const right = contentRange.x + contentRange.width
@@ -121,7 +121,7 @@ export function clearSelection() {
 }
 
 export function compositionStateChange(compositionState, compositionText) {
-  const selectionRange = Grid.$selection().range
+  const selectionRange = Grid.$selectionRange.value
 
   if (compositionState === 'start') {
     View.showInputRange(selectionRange)
@@ -142,7 +142,7 @@ export function compositionStateChange(compositionState, compositionText) {
     console.log('composition end')
     // Grid.setCursorAndSelectionStart(compositionStart)
     View.hideInputRange()
-    View.showCursor(Grid.$rawSelection().end)
+    View.showCursor(Grid.$selection.end)
     View.showSelectionRange(selectionRange)
   }
 }
@@ -155,6 +155,7 @@ export function insertText(text, type) {
     return
   }
 
+  // TODO
   const cursorRange = Grid.$selection().cursorRange
 
   for (let i = 0; i < text.length; i++) {
@@ -170,7 +171,7 @@ export function insertText(text, type) {
 export function overwriteText(text) {
   console.log('overwriteText', text)
 
-  const selectionRange = Grid.$selection().range
+  const selectionRange = Grid.$selectionRange.value
   const removed = Grid.removeRange(selectionRange)
 
   const bounds = Grid.overwriteText(selectionRange, text)
@@ -183,8 +184,9 @@ export function overwriteText(text) {
 }
 
 export function moveCursor(offset) {
-  const rawCursorPosition = Grid.$rawSelection().end
-  const { range: selectionRange } = Grid.$selection()
+  const rawCursorPosition = Grid.$selection.end
+  const selectionRange = Grid.$selectionRange.value
+
   // Grid.select(Range.getAdjacentPosition(cursorRange, offset))
   Grid.select(
     Range.getAdjacentPosition(selectionRange, offset, rawCursorPosition),
@@ -192,7 +194,8 @@ export function moveCursor(offset) {
 }
 
 export function moveCursorAndSelect(offset) {
-  const rawCursorPosition = Grid.$rawSelection().end
+  const rawCursorPosition = Grid.$selection.end
+  // TODO
   const { cursorRange } = Grid.$selection()
   // Grid.selectTo(Range.getAdjacentPosition(cursorRange, offset))
   Grid.selectTo(
@@ -201,7 +204,7 @@ export function moveCursorAndSelect(offset) {
 }
 
 export function moveCursorAndDisplace(offset) {
-  const selectionRange = Grid.$selection().range
+  const selectionRange = Grid.$selectionRange.value
   // Todo: check width
   const displacementOffset = Grid.displaceRangeBy(selectionRange, offset)
   moveSelectionBy(displacementOffset)
@@ -209,16 +212,15 @@ export function moveCursorAndDisplace(offset) {
 }
 
 function moveSelectionBy(offset) {
-  Grid.$rawSelection.update(({ start, end }) => {
-    return {
-      start: Point.add(start, offset),
-      end: Point.add(end, offset),
-    }
-  })
+  const { start, end } = Grid.$selection.value
+  Grid.$selection.value = {
+    start: Point.add(start, offset),
+    end: Point.add(end, offset),
+  }
 }
 
 export function spacebar() {
-  const rawCursorPosition = Grid.$rawSelection().end
+  const rawCursorPosition = Grid.$selection.end
   Grid.push(rawCursorPosition)
   moveCursor({ x: 1, y: 0 })
   checkpoint()
@@ -237,13 +239,14 @@ function push(position, direction) {
 
 export function eraseBackward(isWord) {
   console.log('eraseBackward')
-  const selectionRange = Grid.$selection().range
+  const selectionRange = Grid.$selectionRange.value
   if (selectionRange.width > 0 || selectionRange.height > 0) {
     // const removed = Grid.removeRange(selectionRange)
     // if (removed) checkpoint()
     return
   }
 
+  // TODO
   Grid.moveRangeBy(Grid.$paragraphRange(), { x: -1, y: 0 })
   moveCursor({ x: -1, y: 0 })
   checkpoint()
@@ -251,7 +254,7 @@ export function eraseBackward(isWord) {
 
 export function eraseRange() {
   console.log('eraseRange')
-  const selectionRange = Grid.$selection().range
+  const selectionRange = Grid.$selectionRange.value
   const removed = Grid.removeRange(selectionRange)
   moveCursor({ x: -1, y: 0 })
   if (removed) checkpoint()
@@ -259,7 +262,7 @@ export function eraseRange() {
 
 export function eraseForward(isWord) {
   console.log('eraseForward', isWord)
-  const selectionRange = Grid.$selection().range
+  const selectionRange = Grid.$selectionRange.value
   const removed = Grid.removeRange(selectionRange)
   moveCursor({ x: +1, y: 0 })
   if (removed) checkpoint()
@@ -271,7 +274,7 @@ export function leftClickStart(screen, shiftKey) {
   console.log('leftClickStart', screen, shiftKey)
   Keyboard.focus()
   const start = View.screenToGrid(screen)
-  const selectionRange = Grid.$selection().range
+  const selectionRange = Grid.$selectionRange.value
   if (selectionRange && Range.contains(selectionRange, start)) {
     View.showDashedRange(selectionRange)
     return {
@@ -285,7 +288,7 @@ export function leftClickStart(screen, shiftKey) {
         View.hideDashedRange()
         const offset = Point.sub(position, start)
         if (offset.x === 0 && offset.y === 0) return
-        const selectionRange = Grid.$selection().range
+        const selectionRange = Grid.$selectionRange.value
         Grid.moveRangeBy(selectionRange, offset)
         moveSelectionBy(offset)
         checkpoint()
@@ -307,16 +310,16 @@ export function leftClickStart(screen, shiftKey) {
   }
 }
 
-export function rightClickStart(screen, ctrlKey) {
+export function rightClickStart(screen) {
   return Pan.startPanning(screen)
 }
 
-Mouse.onScroll.subscribe((offset) => {
+Mouse.onScroll((offset) => {
   // Pan.panBy(offset, true)
 })
 
-BrowserZoom.onZoom.subscribe((offset) => {
-  Pan.moveBy(offset, false)
+BrowserZoom.onZoom(({cursorOffset}) => {
+  Pan.moveBy(cursorOffset, false)
 })
 
 //
@@ -328,12 +331,12 @@ import { isFullWidth } from './fullwidth.js'
 addEventListener('keydown', (e) => {
   if (e.ctrlKey && e.key.toLowerCase() === 'f') {
     e.preventDefault()
-    if (Search.$isOpen()) {
+    if (Search.$isOpen.value) {
       Search.open('')
       return
     }
     // TODO: selected text should be read once when selection is made
-    const selectionRange = Grid.$selection().range
+    const selectionRange = Grid.$selectionRange.value
     const selectedText = Grid.readRange(selectionRange)
     Search.open(selectedText)
   }
@@ -345,11 +348,11 @@ Search.$isOpen.subscribe((isOpen) => {
   Keyboard.focus()
 })
 
-Search.$onSearch.subscribe((text) => {
+Search.onSearch((text) => {
   const results = Grid.search(text)
 
   // Reorder results so that the closest match is first
-  const { x, y } = Grid.$rawSelection().end
+  const { x, y } = Grid.$selection.end
 
   let minDistance = Infinity
   let closestResultIndex = 0
@@ -367,7 +370,7 @@ Search.$onSearch.subscribe((text) => {
     ...results.slice(0, closestResultIndex),
   ]
 
-  Search.$searchResults.set(reorderedResults)
+  Search.$searchResults.value = reorderedResults
 })
 
 Search.$highlightedResult.subscribe((result) => {
@@ -379,16 +382,16 @@ Search.$highlightedResult.subscribe((result) => {
   scrollIntoView(result)
 })
 
-const scrollIntoViewPadding = 2 * cellSize.height
+const scrollIntoViewPadding = 2 * cellSize
 function scrollIntoView(range) {
-  const panOffset = Pan.$offset()
-  const gridPixelDimensions = View.$gridPixelDimensions()
+  const panOffset = Pan.$offset.value
+  const gridPixelDimensions = View.$gridPixelDimensions.value
 
   // Range boundaries
-  const rangeLeft = range.x * cellSize.width
-  const rangeTop = range.y * cellSize.height
-  const rangeRight = rangeLeft + (range.width + 1) * cellSize.width
-  const rangeBottom = rangeTop + (range.height + 1) * cellSize.height
+  const rangeLeft = range.x * cellSize
+  const rangeTop = range.y * cellSize
+  const rangeRight = rangeLeft + (range.width + 1) * cellSize
+  const rangeBottom = rangeTop + (range.height + 1) * cellSize
 
   // Current viewport boundaries
   const viewportLeft = -panOffset.x

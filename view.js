@@ -1,41 +1,28 @@
 import { cellSize } from './global.js'
-import {
-  $cellCreated,
-  $cellMoved,
-  $cellRemoved,
-  $cellRestored,
-  $cellUpdated,
-  $contentRange,
-  $paragraphRange,
-  $selection,
-} from './grid.js'
+import * as Grid from './grid.js'
+import * as Search from './search.js'
+import * as BrowserZoom from './browser-zoom.js'
 import { textareaElement } from './keyboard.js'
 import * as Point from './point.js'
-import { computed, signal } from './signal.js'
+import { emitter } from './emitter.js'
 import { clamp, debounce } from './util.js'
-
+import { signal, computed, effect } from '@preact/signals-core'
 import * as Pan from './pan.js'
 
 export function screenToGrid(screen) {
   const rect = originElement.getBoundingClientRect()
-  const x = Math.floor((screen.x - rect.left) / cellSize.width)
-  const y = Math.floor((screen.y - rect.top) / cellSize.height)
+  const x = Math.floor((screen.x - rect.left) / cellSize)
+  const y = Math.floor((screen.y - rect.top) / cellSize)
   return { x, y }
 }
 
-document.documentElement.style.setProperty(
-  '--cell-width',
-  `${cellSize.width}px`,
-)
-document.documentElement.style.setProperty(
-  '--cell-height',
-  `${cellSize.height}px`,
-)
+document.documentElement.style.setProperty('--cell-width', `${cellSize}px`)
+document.documentElement.style.setProperty('--cell-height', `${cellSize}px`)
 
 // document.body.classList.add('press-start-2p')
 // document.body.classList.add('zen-maru-gothic')
 // document.body.classList.add('inconsolata')
-// document.body.classList.add('brush')
+document.body.classList.add('brush')
 // document.body.classList.add('courier')
 
 export const gridElement = document.createElement('div')
@@ -44,10 +31,10 @@ document.body.appendChild(gridElement)
 
 export const $gridPixelDimensions = signal({ width: 0, height: 0 })
 new ResizeObserver(() => {
-  $gridPixelDimensions.set({
+  $gridPixelDimensions.value = {
     width: gridElement.offsetWidth,
     height: gridElement.offsetHeight,
-  })
+  }
 }).observe(gridElement)
 
 const gridBackgroundElement = document.createElement('div')
@@ -55,32 +42,34 @@ gridBackgroundElement.innerHTML = `<svg width="100%" height="100%">
   <defs>
     <pattern patternUnits="userSpaceOnUse"
              id="gridPattern" 
-             width="${cellSize.width * 2}" 
-             height="${cellSize.height * 2}"
-             viewBox="0 0 4 8">
-      <path d="M 1 0 L 1 3
-               M 0 3 L 4 3
-               M 3 3 L 3 7
-               M 0 7 L 4 7
-               M 1 7 L 1 8
+             width="${cellSize}" 
+             height="${cellSize}">
+      <path d="M ${cellSize / 2} 0 L ${cellSize / 2} ${cellSize}
+               M 0 ${cellSize / 2} L ${cellSize} ${cellSize / 2}
               "
             stroke="var(--grid-lines-color)" 
-            stroke-width="${0.1 / devicePixelRatio}" 
-            -shape-rendering="crispEdges"
+            stroke-width="${1}" 
+           
             fill="none"/>
     </pattern>
   </defs>
   <rect width="100%" height="100%" fill="url(#gridPattern)" />
 </svg>`
 const gridPatternElement = gridBackgroundElement.querySelector('pattern')
-Pan.$offset.subscribe(({ x, y }) => {
-  const w = cellSize.width * 2
-  const h = cellSize.height * 2
+effect(() => {
+  const zoom = BrowserZoom.$zoom.value
+  gridPatternElement.setAttribute(
+    'shape-rendering',
+    parseInt(zoom) === zoom ? 'crispEdges' : 'auto',
+  )
+})
+effect(() => {
+  const { x, y } = Pan.$offset.value
   gridPatternElement.setAttribute(
     'patternTransform',
-    `translate(${x - w / 4} ${y + h / 8})`,
+    `translate(${x + cellSize / 2} ${y + cellSize / 2})`,
   )
-}, true)
+})
 gridBackgroundElement.className = 'gridBackground'
 gridElement.appendChild(gridBackgroundElement)
 
@@ -127,34 +116,38 @@ originElement.appendChild(selectionRangeElement)
 const paragraphRangeElement = document.createElement('div')
 paragraphRangeElement.className = 'range paragraphRange'
 // originElement.appendChild(paragraphRangeElement)
-$paragraphRange.subscribe((range) => {
+Grid.$paragraphRange.subscribe((range) => {
   // console.log('paragraphRange', range)
   setGridPosition(paragraphRangeElement, range)
   setGridDimensions(paragraphRangeElement, range)
 })
 
-//                                                             
+//
 
-$selection.subscribe(({ range, cursorRange }) => {
-  setGridPosition(cursorElement, cursorRange)
-  setGridDimensions(cursorElement, cursorRange)
+effect(() => {
+  const selection = Grid.$selection.value
+  const selectionRange = Grid.$selectionRange.value
 
-  setGridPosition(selectionRangeElement, range)
-  setGridDimensions(selectionRangeElement, range)
+  setGridPosition(cursorElement, selection.end)
+  setGridDimensions(cursorElement, { width: 0, height: 0 })
+
+  setGridPosition(selectionRangeElement, selectionRange)
+  setGridDimensions(selectionRangeElement, selectionRange)
 })
 
 //
-
-import * as Search from './search.js'
 
 const searchElement = document.createElement('div')
 searchElement.className = 'search'
 originElement.appendChild(searchElement)
 
-computed([Search.$isOpen, Search.$highlightedResult], (isOpen, result) => {
+effect(() => {
+  const isOpen = Search.$isOpen.value
+  const highlightedResult = Search.$highlightedResult.value
   gridElement.classList.toggle('searching', isOpen)
   searchElement.style.display = isOpen ? 'block' : 'none'
-  selectionRangeElement.style.display = isOpen && !result ? 'none' : 'block'
+  selectionRangeElement.style.display =
+    isOpen && !highlightedResult ? 'none' : 'block'
 })
 
 Search.$searchResults.subscribe((results) => {
@@ -162,9 +155,9 @@ Search.$searchResults.subscribe((results) => {
   for (const { x, y, width, height } of results) {
     const cell = document.createElement('div')
     cell.className = 'range searchResult'
-    cell.style.translate = `${x * cellSize.width}px ${y * cellSize.height}px`
-    cell.style.width = `${(width + 1) * cellSize.width}px`
-    cell.style.height = `${(height + 1) * cellSize.height}px`
+    cell.style.translate = `${x * cellSize}px ${y * cellSize}px`
+    cell.style.width = `${(width + 1) * cellSize}px`
+    cell.style.height = `${(height + 1) * cellSize}px`
     searchElement.appendChild(cell)
   }
 })
@@ -196,8 +189,8 @@ function setGridPosition(el, point) {
 }
 
 function setGridDimensions(el, { width, height }) {
-  el.style.width = `${(width + 1) * cellSize.width}px`
-  el.style.height = `${(height + 1) * cellSize.height}px`
+  el.style.width = `${(width + 1) * cellSize}px`
+  el.style.height = `${(height + 1) * cellSize}px`
 }
 
 //
@@ -205,54 +198,51 @@ function setGridDimensions(el, { width, height }) {
 let didScroll = false
 let scrollReference = { x: 0, y: 0 }
 
-computed(
-  [Pan.$offset, $contentRange, $gridPixelDimensions],
-  (panOffset, contentRange, gridPixelDimensions) => {
-    // console.log(panOffset, contentRange, gridPixelDimensions)
+effect(() => {
+  const panOffset = Pan.$offset.value
+  const contentRange = Grid.$contentRange.value
+  const gridPixelDimensions = $gridPixelDimensions.value
+  // console.log(panOffset, contentRange, gridPixelDimensions)
 
-    if (panOffset.fromScrollEvent) return
+  if (panOffset.fromScrollEvent) return
 
-    // console.log('panOffset maybe changed,', panOffset)
-    setPosition(originElement, panOffset)
+  // console.log('panOffset maybe changed,', panOffset)
+  setPosition(originElement, panOffset)
 
-    const scroll = Point.round(
-      Point.scale(
-        Point.add(panOffset, Point.scale(contentRange, cellSize)),
-        -1,
-      ),
-    )
+  const scroll = Point.round(
+    Point.scale(Point.add(panOffset, Point.scale(contentRange, cellSize)), -1),
+  )
 
-    scrollReference = Point.scale(
-      {
-        x: Math.max(0, panOffset.x),
-        y: Math.max(0, panOffset.y),
-      },
-      -1,
-    )
+  scrollReference = Point.scale(
+    {
+      x: Math.max(0, panOffset.x),
+      y: Math.max(0, panOffset.y),
+    },
+    -1,
+  )
 
-    if (scroll.x > 0) {
-      originElement.style.left = `${scroll.x}px`
-      const width = Math.ceil(scroll.x + gridPixelDimensions.width)
-      originElement.style.width = width + 'px'
-    } else {
-      originElement.style.left = '0px'
-      originElement.style.width = ''
-    }
+  if (scroll.x > 0) {
+    originElement.style.left = `${scroll.x}px`
+    const width = Math.ceil(scroll.x + gridPixelDimensions.width)
+    originElement.style.width = width + 'px'
+  } else {
+    originElement.style.left = '0px'
+    originElement.style.width = ''
+  }
 
-    if (scroll.y > 0) {
-      originElement.style.top = `${scroll.y}px`
-      const height = Math.ceil(scroll.y + gridPixelDimensions.height)
-      originElement.style.height = height + 'px'
-    } else {
-      originElement.style.top = '0px'
-      originElement.style.height = ''
-    }
+  if (scroll.y > 0) {
+    originElement.style.top = `${scroll.y}px`
+    const height = Math.ceil(scroll.y + gridPixelDimensions.height)
+    originElement.style.height = height + 'px'
+  } else {
+    originElement.style.top = '0px'
+    originElement.style.height = ''
+  }
 
-    didScroll = true
-    scrollBoxElement.scrollLeft = scroll.x
-    scrollBoxElement.scrollTop = scroll.y
-  },
-)
+  didScroll = true
+  scrollBoxElement.scrollLeft = scroll.x
+  scrollBoxElement.scrollTop = scroll.y
+})
 
 scrollBoxElement.addEventListener('scroll', (e) => {
   if (didScroll) {
@@ -267,19 +257,19 @@ scrollBoxElement.addEventListener('scroll', (e) => {
 
   // console.log('scroll event', scrollLeft, scrollTop, '=>', newPanOffset)
 
-  Pan.$offset.set({ ...newPanOffset, fromScrollEvent: true })
+  Pan.$offset.value = { ...newPanOffset, fromScrollEvent: true }
   // TODO: this doesn't work idk why
   Pan.stop()
 })
 
 //
 
-function setCellValue(el, { text, width }) {
-  el.textContent = text
-  el.classList.toggle('wide', width === 2)
+function setCellValue(el, value) {
+  el.textContent = value
+  // el.classList.toggle('wide', isFullWidth(value))
 }
 
-$cellCreated.subscribe(({ id, value, position }) => {
+Grid.onCellCreated(({ id, value, position }) => {
   const el = document.createElement('div')
   el.className = 'cell'
   cellsElement.appendChild(el)
@@ -293,7 +283,7 @@ $cellCreated.subscribe(({ id, value, position }) => {
 // Same as cellCreated, except we are
 // guaranteed that cellCreated was called
 // with this id in the past
-$cellRestored.subscribe(({ id, value, position }) => {
+Grid.onCellRestored(({ id, value, position }) => {
   const el = cellIdToElementMap.get(id)
 
   if (!el.isConnected) {
@@ -304,17 +294,17 @@ $cellRestored.subscribe(({ id, value, position }) => {
   setGridPosition(el, position)
 })
 
-$cellUpdated.subscribe(({ id, value }) => {
+Grid.onCellUpdated(({ id, value }) => {
   const el = cellIdToElementMap.get(id)
   setCellValue(el, value)
 })
 
-$cellMoved.subscribe(({ id, position }) => {
+Grid.onCellMoved(({ id, position }) => {
   const el = cellIdToElementMap.get(id)
   setGridPosition(el, position)
 })
 
-$cellRemoved.subscribe(({ id }) => {
+Grid.onCellRemoved(({ id }) => {
   const el = cellIdToElementMap.get(id)
   el.remove()
   // cellIdToElementMap.delete(id)

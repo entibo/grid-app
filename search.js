@@ -1,4 +1,5 @@
-import { computed, signal } from './signal.js'
+import { signal, computed, effect } from '@preact/signals-core'
+import { emitter } from './emitter.js'
 
 const containerElement = document.createElement('div')
 containerElement.className = 'searchContainer'
@@ -26,17 +27,17 @@ containerElement.appendChild(closeBtnElement)
 export const $isOpen = signal(false)
 
 export function close() {
-  $isOpen.set(false)
+  $isOpen = false
   containerElement.style.display = 'none'
 }
 
 export function open(text) {
-  $isOpen.set(true)
+  $isOpen = true
   containerElement.style.display = 'block'
   if (text !== undefined) inputElement.value = text.trim()
   inputElement.focus()
   inputElement.select()
-  $onSearch.emit(inputElement.value)
+  onSearch.emit(inputElement.value)
 }
 
 //
@@ -72,33 +73,32 @@ inputElement.addEventListener('keydown', (e) => {
 
 //
 
-export const $onSearch = signal('')
+export const onSearch = emitter()
 
-inputElement.addEventListener('input', () => $onSearch.emit(inputElement.value))
+inputElement.addEventListener('input', () => onSearch.emit(inputElement.value))
 
 //
 
 export const $searchResults = signal([])
 
 const $index = signal(0)
-$searchResults.subscribe(() => $index.set(0))
+$searchResults.subscribe(() => ($index.value = 0))
 
 export const $highlightedResult = computed(
-  [$searchResults, $index],
-  (searchResults, index) => searchResults[index],
+  () => $searchResults.value[$index.value],
 )
 
-$searchResults.subscribe((results) => {
-  previousBtnElement.disabled = results.length === 0
-  nextBtnElement.disabled = results.length === 0
+$searchResults.subscribe(({ length }) => {
+  previousBtnElement.disabled = length === 0
+  nextBtnElement.disabled = length === 0
 })
 
 function findPrevious() {
-  const { length } = $searchResults()
-  $index.update((index) => (index - 1 + length) % length)
+  const { length } = $searchResults.value
+  $index.value = ($index.value - 1 + length) % length
 }
 
 function findNext() {
-  const { length } = $searchResults()
-  $index.update((index) => (index + 1) % length)
+  const { length } = $searchResults.value
+  $index.value = ($index.value + 1 + length) % length
 }

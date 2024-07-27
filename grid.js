@@ -1,14 +1,15 @@
+import { emitter } from './emitter.js'
 import * as Point from './point.js'
 import * as Range from './range.js'
 import { debounce, partition } from './util.js'
 
-import { computed, signal } from './signal.js'
+import { signal, computed } from '@preact/signals-core'
 
-export const $cellCreated = signal()
-export const $cellRestored = signal()
-export const $cellMoved = signal()
-export const $cellUpdated = signal()
-export const $cellRemoved = signal()
+export const onCellCreated = emitter()
+export const onCellRestored = emitter()
+export const onCellMoved = emitter()
+export const onCellUpdated = emitter()
+export const onCellRemoved = emitter()
 
 // Subscribe to each signal for logging
 // $cellCreated.subscribe((cell) => console.log('cellCreated', cell))
@@ -22,20 +23,28 @@ export const $cellRemoved = signal()
 const $cellMap = signal(new Map())
 // $cellMap.subscribe((cellMap) => (window.cells = getCells()))
 
-export const $rawSelection = signal({
+// Selection
+
+export const $selection = signal({
   start: { x: 0, y: 0 },
   end: { x: 0, y: 0 },
 })
 
-// Can't cut a multi-cell item in half
-export const $selection = computed([$rawSelection], ({ start, end }) => {
-  const range = getExtendedRange(Range.fromPoints(start, end))
-  const cursorRange = getExtendedRange({
-    ...end,
-    width: 0,
-    height: 0,
-  })
-  return { range, cursorRange }
+export function select(start, end = start) {
+  $selection.value = { start, end }
+}
+export function selectTo(end) {
+  const { start } = $selection.value
+  $selection.value = { start, end }
+}
+export function clearSelection() {
+  const { end } = $selection.value
+  select(end, end)
+}
+
+export const $selectionRange = computed(() => {
+  const { start, end } = $selection.value
+  return Range.fromPoints(start, end)
 })
 
 //
@@ -43,79 +52,59 @@ export const $selection = computed([$rawSelection], ({ start, end }) => {
 export const $contentRange = signal({ x: 0, y: 0, width: 0, height: 0 })
 function updateContentRange(cellMap) {
   const positions = Array.from(cellMap.values()).map(({ position }) => position)
-  $contentRange.set(Range.getBoundingRange(positions))
+  $contentRange.value = Range.getBoundingRange(positions)
 }
 $cellMap.subscribe(debounce(updateContentRange, 0))
 
 export function getGrid() {
   return {
-    cellMap: $cellMap(),
-    selection: $rawSelection(),
+    cellMap: $cellMap.value,
+    selection: $selection.value,
   }
 }
 export function setGrid({ selection, cellMap }) {
-  const oldCells = getCells()
-  const oldCellsById = new Map(oldCells.map((cell) => [cell.id, cell]))
+  const oldCellsById = new Map(getCells().map((cell) => [cell.id, cell]))
 
-  $cellMap.set(cellMap)
+  $cellMap.value = cellMap
 
   const newCells = getCells()
   for (const cell of newCells) {
-    $cellRestored.emit(cell)
+    onCellRestored.emit(cell)
     oldCellsById.delete(cell.id)
   }
 
   for (const cell of oldCellsById.values()) {
-    $cellRemoved.emit(cell)
+    onCellRemoved.emit(cell)
   }
 
-  $rawSelection.set(selection)
+  $selection.value = selection
 }
 
 function newCell(position, value) {
   return { position, value, id: {} }
 }
 
-// Selection
-
-export function select(start, end = start) {
-  $rawSelection.set({ start, end })
-}
-export function selectTo(end) {
-  $rawSelection.update(({ start }) => {
-    return { start, end }
-  })
-}
-
-export function clearSelection() {
-  $rawSelection.update(({ end }) => {
-    return { start: end, end }
-  })
-}
-
 //
 
 export function getCellAt({ x, y }) {
-  return $cellMap().get(`${x},${y}`)
+  return $cellMap.value.get(`${x},${y}`)
 }
 
 export function getCells() {
-  return Array.from($cellMap().values())
+  return Array.from($cellMap.value.values())
 }
 
 function setCells(cells) {
-  $cellMap.set(
-    new Map(
-      cells.map((cell) => [`${cell.position.x},${cell.position.y}`, cell]),
-    ),
+  $cellMap.value = new Map(
+    cells.map((cell) => [`${cell.position.x},${cell.position.y}`, cell]),
   )
 }
 
 export function readRange(range) {
-  const cells = getCells().filter((cell) => rangeContainsCell(range, cell))
-  // Todo: this is the only call to cellsToText
-  // which needs a. cells, b. lookup map, c. bounding range
-  // all 3 of which we have, sort of through [cells, $cellMap(), range]
+  if (!range) return cellsToText(getCells())
+  const cells = getCells().filter((cell) =>
+    Range.contains(range, cell.position),
+  )
   return cellsToText(cells)
 }
 
@@ -137,7 +126,7 @@ export function writeRange(range, pseudoCells) {
   const removedCells = []
 
   for (const cell of getCells()) {
-    if (!rangeContainsCell(range, cell)) {
+    if (!Range.contains(range, cell.position)) {
       untouchedCells.push(cell)
       continue
     }
@@ -163,9 +152,9 @@ export function writeRange(range, pseudoCells) {
 
   setCells([...untouchedCells, ...updatedCells, ...createdCells])
 
-  updatedCells.forEach((cell) => $cellUpdated.emit(cell))
-  createdCells.forEach((cell) => $cellCreated.emit(cell))
-  removedCells.forEach((cell) => $cellRemoved.emit(cell))
+  updatedCells.forEach((cell) => onCellUpdated.emit(cell))
+  createdCells.forEach((cell) => onCellCreated.emit(cell))
+  removedCells.forEach((cell) => onCellRemoved.emit(cell))
 }
 
 export function removeRange(range) {
@@ -173,27 +162,22 @@ export function removeRange(range) {
 
   setCells(
     getCells().filter((cell) => {
-      if (!rangeContainsCell(range, cell)) return true
+      if (!Range.contains(range, cell.position)) return true
       removedCells.push(cell)
       return false
     }),
   )
 
-  removedCells.forEach($cellRemoved.emit)
+  removedCells.forEach(onCellRemoved.emit)
   return removedCells.length
 }
 
 export function displaceRangeBy(range, offset) {
-  const otherRange = getExtendedRange({
+  const otherRange = {
     ...Range.getAdjacentPosition(range, offset),
     width: offset.x ? 0 : range.width,
     height: offset.y ? 0 : range.height,
-  })
-
-  // there be bugs
-  const extendedRange = getExtendedRange(
-    Range.getBoundingRange([range, otherRange]),
-  )
+  }
 
   const rangeOffset = Point.scale(
     {
@@ -211,11 +195,11 @@ export function displaceRangeBy(range, offset) {
   )
 
   function getNewPosition(cell) {
-    if (rangeContainsCell(otherRange, cell)) {
+    if (Range.contains(otherRange, cell.position)) {
       return Point.add(cell.position, otherRangeOffset)
     }
 
-    if (rangeContainsCell(extendedRange, cell)) {
+    if (Range.contains(range, cell.position)) {
       return Point.add(cell.position, rangeOffset)
     }
 
@@ -228,7 +212,7 @@ export function displaceRangeBy(range, offset) {
       if (!newPosition) return cell
 
       const movedCell = { ...cell, position: newPosition }
-      $cellMoved.emit(movedCell, cell)
+      onCellMoved.emit(movedCell, cell)
       return movedCell
     }),
   )
@@ -245,17 +229,17 @@ export function moveRangeBy(range, offset, removeOverlap = true) {
     const [removedCells, remainingCells] = partition(
       cells,
       (cell) =>
-        rangeContainsCell(targetRange, cell, false) &&
-        !rangeContainsCell(range, cell),
+        Range.contains(targetRange, cell.position) &&
+        !Range.contains(range, cell.position),
     )
-    removedCells.forEach($cellRemoved.emit)
+    removedCells.forEach(onCellRemoved.emit)
     cells = remainingCells
   }
 
   cells = cells.map((cell) => {
-    if (!rangeContainsCell(range, cell)) return cell
+    if (!Range.contains(range, cell.position)) return cell
     const movedCell = { ...cell, position: Point.add(cell.position, offset) }
-    $cellMoved.emit(movedCell, cell)
+    onCellMoved.emit(movedCell, cell)
     return movedCell
   })
 
@@ -268,7 +252,7 @@ function getInlineLength(position) {
     const cell = getCellAt({ x, y: position.y })
     if (cell) {
       emptyCount = 0
-      x += cell.value.width
+      x += 1
     } else {
       emptyCount++
       x++
@@ -277,19 +261,17 @@ function getInlineLength(position) {
   return x - 1
 }
 
-export const $paragraphRange = computed(
-  [$selection],
-  ({ range: selectionRange }) => {
-    const right = getInlineLength({
-      x: selectionRange.x + selectionRange.width,
-      y: selectionRange.y,
-    })
-    return {
-      ...selectionRange,
-      width: right - selectionRange.x,
-    }
-  },
-)
+export const $paragraphRange = computed(() => {
+  const selectionRange = $selectionRange.value
+  const right = getInlineLength({
+    x: selectionRange.x + selectionRange.width,
+    y: selectionRange.y,
+  })
+  return {
+    ...selectionRange,
+    width: right - selectionRange.x,
+  }
+})
 
 export function push(position, direction) {
   const endX = getInlineLength(position)
@@ -302,7 +284,7 @@ export function push(position, direction) {
       const newPosition = Point.add(cell.position, { x: 1, y: 0 })
 
       const movedCell = { ...cell, position: newPosition }
-      $cellMoved.emit(movedCell, cell)
+      onCellMoved.emit(movedCell, cell)
       return movedCell
     }),
   )
@@ -326,26 +308,7 @@ export function overwriteText(start, text) {
   return bounds
 }
 
-import { isFullWidth } from './fullwidth.js'
-const isWhitespace = (c) => c.match(/\s/)
-
 //
-
-export function rangeContainsCell(range, cell, fully = true) {
-  if (cell.value.width === 2) {
-    if (fully)
-      return (
-        Range.contains(range, cell.position) &&
-        Range.contains(range, Point.add(cell.position, { x: 1, y: 0 }))
-      )
-    else
-      return (
-        Range.contains(range, cell.position) ||
-        Range.contains(range, Point.add(cell.position, { x: 1, y: 0 }))
-      )
-  }
-  return Range.contains(range, cell.position)
-}
 
 // Convert text to {position, value}
 function textToCells(text) {
@@ -359,20 +322,19 @@ function textToCells(text) {
     for (let i = 0; i < characters.length; i++) {
       const text = characters[i]
       const position = { x, y }
-      const width = isFullWidth(text) ? 2 : 1
 
-      if (!isWhitespace(text)) {
-        positionedValues.push({ position, value: { text, width } })
+      if (!text.match(/\s/)) {
+        positionedValues.push({ position, value: text })
       }
 
-      x += width
+      x++
     }
   }
-  return positionedValues 
+  return positionedValues
 }
 
 // Full-width space character: '\u3000'
-const defaultTextValue = ' '
+const defaultTextValue = '\u3000'
 function cellsToText(cells, lookupMap) {
   lookupMap ??= new Map(
     cells.map((o) => [`${o.position.x},${o.position.y}`, o]),
@@ -381,15 +343,9 @@ function cellsToText(cells, lookupMap) {
   const lines = []
   for (let y = bounds.y; y < bounds.y + bounds.height + 1; y++) {
     const line = []
-    for (let x = bounds.x; x < bounds.x + bounds.width + 1; ) {
+    for (let x = bounds.x; x < bounds.x + bounds.width + 1; x++) {
       const cell = lookupMap.get(`${x},${y}`)
-      if (cell) {
-        line.push(cell.value.text)
-        x += cell.value.width
-      } else {
-        line.push(defaultTextValue)
-        x++
-      }
+      line.push(cell?.value ?? defaultTextValue)
     }
     lines.push(line.join('').trimEnd())
   }
@@ -399,7 +355,6 @@ function cellsToText(cells, lookupMap) {
 //
 
 const normalizeCharacter = (character) => character.toLowerCase()
-const isSpace = (character) => character === ' '
 
 export function search(text) {
   const characters = [...text.trim().replace(/\s+/g, ' ')].map(
@@ -408,7 +363,7 @@ export function search(text) {
   if (characters.length === 0) return []
   const firstCharacter = characters[0]
   const startCells = getCells().filter(
-    (cell) => normalizeCharacter(cell.value.text) === firstCharacter,
+    (cell) => normalizeCharacter(cell.value) === firstCharacter,
   )
 
   // In-place sorting
@@ -436,12 +391,12 @@ export function search(text) {
         const cell = getCellAt(
           Point.add(position, Point.scale(direction, i + 1)),
         )
-        // Space character? Expect NO cell
-        if (isSpace(character)) return !cell
+        // Normalized space character? Expect NO cell
+        if (character === ' ') return !cell
         // Not space: expect a cell
         if (!cell) return false
         // Check cell value
-        return normalizeCharacter(cell.value.text) === character
+        return normalizeCharacter(cell.value) === character
       })
 
       // No match? Skip
@@ -457,50 +412,3 @@ export function search(text) {
 }
 
 //
-
-// Ensure that items larger than 1x1
-// are fully contained in the range
-function getExtendedRange(range) {
-  let minLeft = range.x
-  let minRight = range.x + range.width
-
-  const cells = getCells()
-  let didExpand = false
-  do {
-    didExpand = false
-    for (const cell of cells) {
-      const { x, y } = cell.position
-      if (y < range.y || y > range.y + range.height) continue
-      const { width } = cell.value
-      if (width === 1) continue
-
-      const cellLeft = x
-      const cellRight = x + 1
-
-      if (cellLeft === minLeft - 1) {
-        minLeft = cellLeft
-        didExpand = true
-      }
-
-      if (cellRight === minRight + 1) {
-        minRight = cellRight
-        didExpand = true
-      }
-    }
-  } while (didExpand)
-
-  return {
-    x: minLeft,
-    y: range.y,
-    width: minRight - minLeft,
-    height: range.height,
-  }
-}
-
-function squareGrided(range) {
-  return {
-    ...range,
-    x: Math.floor(range.x / 2) * 2,
-    width: Math.ceil((range.width + 1) / 2) * 2 - 1,
-  }
-}

@@ -1,5 +1,5 @@
 import * as Point from './point.js'
-import { signal } from './signal.js'
+import { signal } from '@preact/signals-core'
 
 let targetOffset = null
 export const $offset = signal({ x: 0, y: 0 })
@@ -9,7 +9,7 @@ export function moveBy(offset, transition = false) {
     stop()
     targetOffset = Point.add(targetOffset || $offset.value, offset)
   } else {
-    $offset.update((currentOffset) => Point.add(currentOffset, offset))
+    $offset.value = Point.add($offset.value, offset)
   }
 }
 
@@ -18,7 +18,7 @@ export function moveTo(offset, transition = false) {
     stop()
     targetOffset = offset
   } else {
-    $offset.set(offset)
+    $offset.value = offset
   }
 }
 
@@ -37,10 +37,8 @@ export function stop() {
     previousTime = time
 
     if (targetOffset) {
-      $offset.update((currentOffset) =>
-        tendTo(currentOffset, targetOffset, 3 * ms),
-      )
-      if (Point.equals($offset(), targetOffset)) {
+      $offset.value = tendTo($offset.value, targetOffset, 3 * ms)
+      if (Point.equals($offset.value, targetOffset)) {
         targetOffset = null
       }
       return
@@ -49,9 +47,7 @@ export function stop() {
     velocity = tendTo(velocity, { x: 0, y: 0 }, ms)
     if (Point.equals(velocity, { x: 0, y: 0 })) return
 
-    $offset.update((currentOffset) =>
-      Point.add(currentOffset, Point.scale(velocity, ms)),
-    )
+    $offset.value = Point.add($offset.value, Point.scale(velocity, ms))
   }
 }
 
@@ -62,7 +58,7 @@ export function startPanning(startScreenPosition) {
 
   let releaseVelocity = { x: 0, y: 0 }
 
-  const startOffset = $offset()
+  const startOffset = $offset.value
 
   let previousPosition = startScreenPosition
   let previousTime = performance.now()
@@ -71,7 +67,7 @@ export function startPanning(startScreenPosition) {
     move(screenPosition) {
       const screenDistanceStart = Point.sub(screenPosition, startScreenPosition)
 
-      $offset.set(Point.add(startOffset, screenDistanceStart))
+      $offset.value = Point.add(startOffset, screenDistanceStart)
 
       const time = performance.now()
       const ms = Math.max(1, time - previousTime)

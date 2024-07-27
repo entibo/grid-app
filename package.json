@@ -1,0 +1,22 @@
+{
+  "name": "grid-app",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/entibo/grid-app.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/entibo/grid-app/issues"
+  },
+  "homepage": "https://github.com/entibo/grid-app#readme",
+  "dependencies": {
+    "@preact/signals-core": "^1.7.0"
+  }
+}
