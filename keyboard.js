@@ -1,3 +1,4 @@
+import { effect } from '@preact/signals-core'
 import {
   clearSelection,
   compositionStateChange,
@@ -18,6 +19,7 @@ import {
   undo,
 } from './index.js'
 import { isKeyDown, keyDownTime } from './keyboard-global.js'
+import * as Selection from './selection.js'
 
 function space() {
   spacebar()
@@ -34,12 +36,13 @@ export const textareaElement = document.createElement('textarea')
 textareaElement.tabIndex = -1
 document.body.appendChild(textareaElement)
 
-export function setValue(value) {
-  textareaElement.value = value
+effect(() => {
+  const text = Selection.$selectionText.value
+  textareaElement.value = text
   if (document.activeElement === textareaElement) {
     textareaElement.select()
   }
-}
+})
 
 export function focus() {
   if (document.activeElement !== textareaElement) {

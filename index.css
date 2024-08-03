@@ -1,6 +1,7 @@
 :root {
   --grid-bg-color: #f0f0f0;
   --grid-lines-color: rgb(218, 210, 208);
+  --grid-cursor-thickness: 2px;
 }
 
 * {
@@ -40,6 +41,13 @@ textarea {
   -webkit-user-select: none;
 
   background: var(--grid-bg-color);
+  /* cursor: none; */
+}
+.grid.horizontal {
+  cursor: text;
+}
+.grid.vertical {
+  cursor: vertical-text;
 }
 
 .gridBackground {
@@ -81,12 +89,25 @@ textarea {
 
 .cursor {
   position: absolute;
-  width: calc(var(--cell-width));
-  height: calc(var(--cell-height));
+  width: calc(var(--cell-width) + var(--grid-cursor-thickness));
+  height: calc(var(--cell-height) + var(--grid-cursor-thickness));
   /* outline: 1px solid rgba(0, 0, 0, 0.7); */
-  /* background: rgba(100, 100, 255, 0.1); */
-  outline: rgba(100, 100, 255, 0.5) solid 1px;
-  /* border-right: rgba(100, 100, 255, 0.7) solid 3px; */
+  background: rgba(100, 100, 255, 0.7);
+  /* outline: rgba(100, 100, 255, 0.5) solid 1px; */
+  border: none;
+  transition: margin 100ms, width 100ms, height 100ms;
+}
+.grid.horizontal .cursor {
+  margin-left: calc(var(--cell-width));
+  width: calc(var(--grid-cursor-thickness));
+  height: calc(var(--cell-height));
+  /* border-right: rgba(100, 100, 255, 0.7) solid var(--grid-cursor-thickness); */
+}
+.grid.vertical .cursor {
+  margin-top: calc(var(--cell-height));
+  width: calc(var(--cell-width));
+  height: calc(var(--grid-cursor-thickness));
+  /* border-bottom: rgba(100, 100, 255, 0.7) solid var(--grid-cursor-thickness); */
 }
 .grid.searching .cursor {
   opacity: 0;

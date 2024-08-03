@@ -54,6 +54,16 @@ export function getBoundingRange(pointsAndRanges) {
   }
 }
 
+export function getPositions(range) {
+  const cells = []
+  for (let y = range.y; y <= range.y + range.height; y++) {
+    for (let x = range.x; x <= range.x + range.width; x++) {
+      cells.push({ x, y })
+    }
+  }
+  return cells
+}
+
 //
 
 export function getAdjacentPosition(range, offset, referencePosition = range) {

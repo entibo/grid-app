@@ -1,4 +1,5 @@
 import { cellSize } from './global.js'
+import * as Selection from './selection.js'
 import * as Grid from './grid.js'
 import * as Search from './search.js'
 import * as BrowserZoom from './browser-zoom.js'
@@ -9,7 +10,35 @@ import { clamp, debounce } from './util.js'
 import { signal, computed, effect } from '@preact/signals-core'
 import * as Pan from './pan.js'
 
-export function screenToGrid(screen) {
+addEventListener('mousemove', (e) => {
+  const rect = originElement.getBoundingClientRect()
+  const x = (((e.clientX - rect.left) / cellSize) % 1) - 0.5
+  const y = (((e.clientY - rect.top) / cellSize) % 1) - 0.5
+  const isHorizontal = Math.abs(x) > Math.abs(y)
+  gridElement.classList.toggle('horizontal', isHorizontal)
+  gridElement.classList.toggle('vertical', !isHorizontal)
+})
+
+function screenToCursor(screen) {
+  const rect = originElement.getBoundingClientRect()
+  const x = (screen.x - rect.left) / cellSize
+  const y = (screen.y - rect.top) / cellSize
+  const isHorizontal = Math.abs((x % 1) - 0.5) > Math.abs((y % 1) - 0.5)
+  if (isHorizontal)
+    return {
+      isHorizontal,
+      x: Math.round(x),
+      y: Math.floor(y),
+    }
+  else
+    return {
+      isHorizontal,
+      x: Math.floor(x),
+      y: Math.round(y),
+    }
+}
+
+export function screenToGridCell(screen) {
   const rect = originElement.getBoundingClientRect()
   const x = Math.floor((screen.x - rect.left) / cellSize)
   const y = Math.floor((screen.y - rect.top) / cellSize)
@@ -21,12 +50,17 @@ document.documentElement.style.setProperty('--cell-height', `${cellSize}px`)
 
 // document.body.classList.add('press-start-2p')
 // document.body.classList.add('zen-maru-gothic')
-// document.body.classList.add('inconsolata')
-document.body.classList.add('brush')
+document.body.classList.add('inconsolata')
+// document.body.classList.add('brush')
 // document.body.classList.add('courier')
 
 export const gridElement = document.createElement('div')
 gridElement.className = 'grid'
+effect(() => {
+  const horizontal = Selection.$horizontal.value
+  gridElement.classList.toggle('horizontal', horizontal)
+  gridElement.classList.toggle('vertical', !horizontal)
+})
 document.body.appendChild(gridElement)
 
 export const $gridPixelDimensions = signal({ width: 0, height: 0 })
@@ -116,7 +150,7 @@ originElement.appendChild(selectionRangeElement)
 const paragraphRangeElement = document.createElement('div')
 paragraphRangeElement.className = 'range paragraphRange'
 // originElement.appendChild(paragraphRangeElement)
-Grid.$paragraphRange.subscribe((range) => {
+Selection.$paragraphRange.subscribe((range) => {
   // console.log('paragraphRange', range)
   setGridPosition(paragraphRangeElement, range)
   setGridDimensions(paragraphRangeElement, range)
@@ -125,11 +159,11 @@ Grid.$paragraphRange.subscribe((range) => {
 //
 
 effect(() => {
-  const selection = Grid.$selection.value
-  const selectionRange = Grid.$selectionRange.value
+  const selection = Selection.$selection.value
+  const selectionRange = Selection.$selectionRange.value
 
   setGridPosition(cursorElement, selection.end)
-  setGridDimensions(cursorElement, { width: 0, height: 0 })
+  // setGridDimensions(cursorElement, { width: 0, height: 0 })
 
   setGridPosition(selectionRangeElement, selectionRange)
   setGridDimensions(selectionRangeElement, selectionRange)
@@ -200,7 +234,7 @@ let scrollReference = { x: 0, y: 0 }
 
 effect(() => {
   const panOffset = Pan.$offset.value
-  const contentRange = Grid.$contentRange.value
+  const contentRange = Selection.$contentRange.value
   const gridPixelDimensions = $gridPixelDimensions.value
   // console.log(panOffset, contentRange, gridPixelDimensions)
 
@@ -382,5 +416,5 @@ export function updateInputRange({ x, y }, compositionText) {
 
 export function hideInputRange() {
   hideElement(inputRangeElement)
-  setGridDimensions(cursorElement, { width: 0, height: 0 })
+  // setGridDimensions(cursorElement, { width: 0, height: 0 })
 }

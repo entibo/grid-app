@@ -1,9 +1,9 @@
 import { emitter } from './emitter.js'
 import * as Point from './point.js'
 import * as Range from './range.js'
-import { debounce, partition } from './util.js'
+import { partition } from './util.js'
 
-import { signal, computed } from '@preact/signals-core'
+import { signal } from '@preact/signals-core'
 
 export const onCellCreated = emitter()
 export const onCellRestored = emitter()
@@ -20,55 +20,20 @@ export const onCellRemoved = emitter()
 
 //
 
-const $cellMap = signal(new Map())
-// $cellMap.subscribe((cellMap) => (window.cells = getCells()))
+export const $cellMap = signal(new Map())
 
-// Selection
-
-export const $selection = signal({
-  start: { x: 0, y: 0 },
-  end: { x: 0, y: 0 },
-})
-
-export function select(start, end = start) {
-  $selection.value = { start, end }
-}
-export function selectTo(end) {
-  const { start } = $selection.value
-  $selection.value = { start, end }
-}
-export function clearSelection() {
-  const { end } = $selection.value
-  select(end, end)
-}
-
-export const $selectionRange = computed(() => {
-  const { start, end } = $selection.value
-  return Range.fromPoints(start, end)
-})
-
-//
-
-export const $contentRange = signal({ x: 0, y: 0, width: 0, height: 0 })
-function updateContentRange(cellMap) {
-  const positions = Array.from(cellMap.values()).map(({ position }) => position)
-  $contentRange.value = Range.getBoundingRange(positions)
-}
-$cellMap.subscribe(debounce(updateContentRange, 0))
-
-export function getGrid() {
-  return {
-    cellMap: $cellMap.value,
-    selection: $selection.value,
-  }
-}
-export function setGrid({ selection, cellMap }) {
+export function setCellMap(cellMap) {
   const oldCellsById = new Map(getCells().map((cell) => [cell.id, cell]))
 
   $cellMap.value = cellMap
 
   const newCells = getCells()
   for (const cell of newCells) {
+    // This cell might currently
+    // - not exist
+    // - have a different value
+    // - have a different position
+    // But a cell with the same ID did exist previously
     onCellRestored.emit(cell)
     oldCellsById.delete(cell.id)
   }
@@ -76,8 +41,6 @@ export function setGrid({ selection, cellMap }) {
   for (const cell of oldCellsById.values()) {
     onCellRemoved.emit(cell)
   }
-
-  $selection.value = selection
 }
 
 function newCell(position, value) {
@@ -246,42 +209,40 @@ export function moveRangeBy(range, offset, removeOverlap = true) {
   setCells(cells)
 }
 
-function getInlineLength(position) {
-  let x = position.x
-  for (let emptyCount = 0; emptyCount < 3; ) {
-    const cell = getCellAt({ x, y: position.y })
+export function getLengthUntilBlank(
+  startPosition,
+  numBlanks,
+  direction = { x: 1, y: 0 },
+) {
+  let count = 0
+  let position = startPosition
+  let consecutiveEmptyCells = 0
+  while (true) {
+    const cell = getCellAt(position)
     if (cell) {
-      emptyCount = 0
-      x += 1
+      // todo maybe: store cell at this position
+      // last cell before blank
+      consecutiveEmptyCells = 0
     } else {
-      emptyCount++
-      x++
+      if (++consecutiveEmptyCells === numBlanks) {
+        return { length: count - 1, position }
+      }
     }
+    count++
+    position = Point.add(position, direction)
   }
-  return x - 1
 }
 
-export const $paragraphRange = computed(() => {
-  const selectionRange = $selectionRange.value
-  const right = getInlineLength({
-    x: selectionRange.x + selectionRange.width,
-    y: selectionRange.y,
-  })
-  return {
-    ...selectionRange,
-    width: right - selectionRange.x,
-  }
-})
+export function push(position, direction = { x: 1, y: 0 }) {
+  const { position: endPosition } = getLengthUntilBlank(position, 2, direction)
+  const range = Range.fromPoints(position, endPosition)
+  console.log('push range', range, direction)
 
-export function push(position, direction) {
-  const endX = getInlineLength(position)
-  console.log('push from', position.x, endX)
   setCells(
     getCells().map((cell) => {
-      if (cell.position.y !== position.y) return cell
-      if (cell.position.x < position.x || cell.position.x > endX) return cell
+      if (!Range.contains(range, cell.position)) return cell
 
-      const newPosition = Point.add(cell.position, { x: 1, y: 0 })
+      const newPosition = Point.add(cell.position, direction)
 
       const movedCell = { ...cell, position: newPosition }
       onCellMoved.emit(movedCell, cell)
@@ -290,10 +251,46 @@ export function push(position, direction) {
   )
 }
 
+// Every cell within the range is pushed
+// Lines that start within the range and
+// end outside are also pushed
+// `range` is assumed to be size 0 in 1 axis
+// function pushRange
 //
 
-export function overwriteText(start, text) {
+export function insertText(start, text, direction = { x: 1, y: 0 }) {
   console.log('INSERT TEXT', start.x, start.y, text)
+
+  const pseudoCells = textToCells(text).map(({ position, value }) => ({
+    position: Point.add(position, start),
+    value,
+  }))
+
+  if (!pseudoCells.length) return
+  const bounds = Range.getBoundingRange(
+    pseudoCells.map(({ position }) => position),
+  )
+
+  const horizontal = direction.x !== 0
+  let size = 1 + (horizontal ? bounds.width : bounds.height)
+  // hack to get the "end" of a 1xn or nx1 range
+  const { position: endPosition } = getLengthUntilBlank(
+    Range.bottomRight(bounds),
+    2 + (size - 1),
+    direction,
+  )
+  moveRangeBy(
+    Range.fromPoints(bounds, endPosition),
+    horizontal ? { x: size, y: 0 } : { x: 0, y: size },
+    false,
+  )
+
+  writeRange(bounds, pseudoCells)
+  return bounds
+}
+
+export function overwriteText(start, text) {
+  console.log('Grid.overwriteText', start.x, start.y, text)
 
   const pseudoCells = textToCells(text).map(({ position, value }) => ({
     position: Point.add(position, start),

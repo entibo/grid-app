@@ -42,6 +42,8 @@ function encodeSpace(length) {
   return ['_', String.fromCodePoint(head), ...digits, '_'].join('')
 }
 
+const isSpace = (c) => c === ' ' || c === '\u3000'
+
 function encode(text) {
   let s = ''
   for (let i = 0; i < text.length; i++) {
@@ -58,9 +60,9 @@ function encode(text) {
       s += ' '
       continue
     }
-    if (c === ' ') {
+    if (isSpace(c)) {
       let length = 1
-      while (i + 1 < text.length && text[i + 1] === ' ') {
+      while (i + 1 < text.length && isSpace(text[i + 1])) {
         i++
         length++
       }
