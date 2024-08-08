@@ -1,0 +1,14 @@
+.sans {
+  font-family: 'Inconsolata', sans-serif;
+}
+
+.pop {
+  font-family: 'Hachi Maru Pop';
+  font-size: 1em;
+  line-height: 0.8em;
+}
+
+@font-face {
+  font-family: 'Hachi Maru Pop';
+  src: local('Hachi Maru Pop'), url('fonts/HachiMaruPop-Regular.ttf');
+}

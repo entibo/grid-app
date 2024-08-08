@@ -9,6 +9,7 @@ import { emitter } from './emitter.js'
 import { clamp, debounce } from './util.js'
 import { signal, computed, effect } from '@preact/signals-core'
 import * as Pan from './pan.js'
+import * as Config from './config.js'
 
 addEventListener('mousemove', (e) => {
   const rect = originElement.getBoundingClientRect()
@@ -23,16 +24,16 @@ function screenToCursor(screen) {
   const rect = originElement.getBoundingClientRect()
   const x = (screen.x - rect.left) / cellSize
   const y = (screen.y - rect.top) / cellSize
-  const isHorizontal = Math.abs((x % 1) - 0.5) > Math.abs((y % 1) - 0.5)
-  if (isHorizontal)
+  const horizontal = Math.abs((x % 1) - 0.5) > Math.abs((y % 1) - 0.5)
+  if (horizontal)
     return {
-      isHorizontal,
+      horizontal,
       x: Math.round(x),
       y: Math.floor(y),
     }
   else
     return {
-      isHorizontal,
+      horizontal,
       x: Math.floor(x),
       y: Math.round(y),
     }
@@ -50,9 +51,13 @@ document.documentElement.style.setProperty('--cell-height', `${cellSize}px`)
 
 // document.body.classList.add('press-start-2p')
 // document.body.classList.add('zen-maru-gothic')
-document.body.classList.add('inconsolata')
+// document.body.classList.add('inconsolata')
 // document.body.classList.add('brush')
 // document.body.classList.add('courier')
+// document.body.classList.add('monaspace-radon')
+// document.body.classList.add('azaret')
+// document.body.classList.add('sometype')
+// document.body.classList.add('iosevka-sans')
 
 export const gridElement = document.createElement('div')
 gridElement.className = 'grid'
@@ -194,6 +199,65 @@ Search.$searchResults.subscribe((results) => {
     cell.style.height = `${(height + 1) * cellSize}px`
     searchElement.appendChild(cell)
   }
+})
+
+//
+
+const menuElement = document.createElement('div')
+menuElement.className = 'menu'
+document.body.appendChild(menuElement)
+
+const fontTypeElement = document.createElement('div')
+fontTypeElement.className = 'item fontType'
+const fontTypeSelectElement = document.createElement('select')
+for (const [fontType, { displayName }] of Object.entries(Config.fontTypes)) {
+  const fontTypeOptionElement = document.createElement('option')
+  fontTypeOptionElement.value = fontType
+  fontTypeOptionElement.textContent = displayName
+  fontTypeSelectElement.appendChild(fontTypeOptionElement)
+}
+fontTypeSelectElement.addEventListener('change', (event) => {
+  Config.$fontType.value = event.target.value
+})
+fontTypeElement.appendChild(fontTypeSelectElement)
+const fontTypeDisplayElement = document.createElement('div')
+fontTypeDisplayElement.className = 'displayCharacter fontTypeDisplay'
+fontTypeDisplayElement.textContent = '字'
+fontTypeElement.appendChild(fontTypeDisplayElement)
+menuElement.appendChild(fontTypeElement)
+
+effect(() => {
+  const fontType = Config.$fontType.value
+  for (const t of Object.keys(Config.fontTypes)) {
+    document.body.classList.toggle(t, t === fontType)
+  }
+})
+
+const languageElement = document.createElement('div')
+languageElement.className = 'item language'
+const languageSelectElement = document.createElement('select')
+for (const [language, { displayName }] of Object.entries(Config.languages)) {
+  const languageOptionElement = document.createElement('option')
+  languageOptionElement.value = language
+  languageOptionElement.textContent = displayName
+  languageSelectElement.appendChild(languageOptionElement)
+}
+languageSelectElement.addEventListener('change', (event) => {
+  Config.$language.value = event.target.value
+})
+languageElement.appendChild(languageSelectElement)
+const languageDisplayElement = document.createElement('div')
+languageDisplayElement.className = 'displayCharacter languageDisplay'
+languageElement.appendChild(languageDisplayElement)
+menuElement.appendChild(languageElement)
+
+effect(() => {
+  const language = Config.$language.value
+  for (const l of Object.keys(Config.languages)) {
+    document.body.classList.toggle(l, l === language)
+  }
+  languageDisplayElement.textContent =
+    Config.languages[language].displayCharacter
 })
 
 //

@@ -73,7 +73,7 @@ export function readRange(range) {
 
 //
 
-export function writeRange(range, pseudoCells) {
+function writeRange(range, pseudoCells) {
   const pseudoCellMap = new Map(
     pseudoCells.map((cell) => {
       const { x, y } = cell.position
@@ -233,22 +233,45 @@ export function getLengthUntilBlank(
   }
 }
 
-export function push(position, direction = { x: 1, y: 0 }) {
-  const { position: endPosition } = getLengthUntilBlank(position, 2, direction)
-  const range = Range.fromPoints(position, endPosition)
-  console.log('push range', range, direction)
+// Make room `amount` by pushing cells and compressing 2+ whitespace
+export function push(startPosition, amount, direction = { x: 1, y: 0 }) {
+  if (amount <= 0) return
 
-  setCells(
-    getCells().map((cell) => {
-      if (!Range.contains(range, cell.position)) return cell
+  let movedCells = []
+  let position = startPosition
+  let consecutiveEmptyCells = 0
 
-      const newPosition = Point.add(cell.position, direction)
-
-      const movedCell = { ...cell, position: newPosition }
+  while (true) {
+    const cell = getCellAt(position)
+    if (!cell) {
+      consecutiveEmptyCells++
+      // A single space between cells is incompressible
+      if (consecutiveEmptyCells > 1) {
+        amount--
+        if (amount === 0) break
+      }
+    } else {
+      consecutiveEmptyCells = 0
+      const movedCell = {
+        ...cell,
+        position: Point.add(cell.position, Point.scale(direction, amount)),
+      }
       onCellMoved.emit(movedCell, cell)
-      return movedCell
-    }),
-  )
+      movedCells.push(movedCell)
+    }
+
+    position = Point.add(position, direction)
+  }
+
+  // Range containing the moved cells (before move) and nothing else
+  const movedCellsRange = Range.fromPoints(startPosition, position)
+
+  setCells([
+    ...getCells().filter(
+      (cell) => !Range.contains(movedCellsRange, cell.position),
+    ),
+    ...movedCells,
+  ])
 }
 
 // Every cell within the range is pushed
@@ -289,7 +312,7 @@ export function insertText(start, text, direction = { x: 1, y: 0 }) {
   return bounds
 }
 
-export function overwriteText(start, text) {
+export function writeText(start, text) {
   console.log('Grid.overwriteText', start.x, start.y, text)
 
   const pseudoCells = textToCells(text).map(({ position, value }) => ({

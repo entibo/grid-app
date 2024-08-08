@@ -244,6 +244,7 @@ L ル
 
 ----
 
-Grid pattern: try alternate square cells
+Wide monospace fonts
 
-----
+Inconsolata: variable width 100-150
+Monaspace: variable width 100-125

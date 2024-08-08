@@ -27,12 +27,12 @@ containerElement.appendChild(closeBtnElement)
 export const $isOpen = signal(false)
 
 export function close() {
-  $isOpen = false
+  $isOpen.value = false
   containerElement.style.display = 'none'
 }
 
 export function open(text) {
-  $isOpen = true
+  $isOpen.value = true
   containerElement.style.display = 'block'
   if (text !== undefined) inputElement.value = text.trim()
   inputElement.focus()

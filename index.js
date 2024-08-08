@@ -59,7 +59,7 @@ export function redo() {
 setTimeout(async () => {
   const text = await Storage.load()
   if (text) {
-    Grid.overwriteText({ x: 0, y: 0 }, text)
+    Grid.writeText({ x: 0, y: 0 }, text)
   }
   checkpoint()
 })
@@ -155,16 +155,29 @@ export function compositionStateChange(compositionState, compositionText) {
 export function insertText(text, type) {
   console.log('insertText', text, type)
 
-  if (text.match(/\n/)) {
-    overwriteText(text)
-    return
+  const rawCursorPosition = Selection.$selection.value.end
+  const selectionRange = Selection.$selectionRange.value
+  const direction = { x: 1, y: 0 }
+  const horizontal = direction.x !== 0
+
+  if (/* selection is not empty */ true) {
+    const removed = Grid.removeRange(selectionRange)
   }
 
   // TODO: direction
-  const direction = { x: 1, y: 0 }
-  const rawCursorPosition = Selection.$selection.value.end
-  const selectionRange = Selection.$selectionRange.value
-  Grid.insertText(Point.add(rawCursorPosition, direction), text, direction)
+  const startPosition = Range.contentStart(selectionRange, horizontal)
+
+  const lines = text.split('\n')
+  let position = startPosition
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+    Grid.push(position, line.length, direction)
+    Grid.writeText(position, line)
+    position = Point.nextLine(position, horizontal)
+  }
+
+  // const selectionRange = Selection.$selectionRange.value
+  // Grid.insertText(Point.add(rawCursorPosition, direction), text, direction)
   moveCursor(Point.scale(direction, text.length))
   checkpoint()
 }
@@ -175,7 +188,7 @@ export function overwriteText(text) {
   const selectionRange = Selection.$selectionRange.value
   const removed = Grid.removeRange(selectionRange)
 
-  const bounds = Grid.overwriteText(selectionRange, text)
+  const bounds = Grid.writeText(selectionRange, text)
 
   if (bounds) {
     Selection.select(Point.add(Range.bottomRight(bounds), { x: 1, y: 0 }))
@@ -225,18 +238,13 @@ export function spacebar() {
   const rawCursorPosition = Selection.$selection.value.end
   // TODO: direction
   const direction = { x: 1, y: 0 }
-  Grid.push(Point.add(rawCursorPosition, direction))
+  Grid.push(rawCursorPosition, 1, direction)
+  // Grid.push(Point.add(rawCursorPosition, direction))
   moveCursor(direction)
   checkpoint()
 }
 export function moveToNextLine() {
   moveCursor({ x: 0, y: 1 })
-}
-
-//
-
-function push(position, direction) {
-  // direction is assumed "right"
 }
 
 //

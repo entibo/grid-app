@@ -1,3 +1,5 @@
+@import url('fonts.css');
+
 :root {
   --grid-bg-color: #f0f0f0;
   --grid-lines-color: rgb(218, 210, 208);
@@ -77,7 +79,7 @@ textarea {
   width: calc(var(--cell-width));
   height: var(--cell-height);
   text-align: center;
-  line-height: calc(var(--cell-height) * 1.1);
+  /* line-height: calc(var(--cell-height) * 1.1); */
   /* padding: 0 var(--cell-height) / 4; */
   /* overflow: hidden; */
   /* text-transform: full-width; */
@@ -172,6 +174,53 @@ textarea {
   background: rgba(100, 100, 255, 0.1);
 }
 
+.menu {
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  z-index: 1000;
+  margin-right: 2vmin;
+  margin-bottom: 2vmin;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1vmin;
+}
+.menu > .item {
+  position: relative;
+  border-radius: 50%;
+  background-color: var(--grid-bg-color);
+  border: 1px solid var(--grid-lines-color);
+  width: 2.5rem;
+  height: 2.5rem;
+  overflow: hidden;
+  cursor: pointer;
+}
+.menu > .item > select {
+  appearance: none;
+  border: none;
+  outline: none;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+.menu > .item > .displayCharacter {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2em;
+  user-select: none;
+  pointer-events: none;
+}
+
 @font-face {
   font-family: 'Square';
   src: url('fonts/square.ttf') format('truetype');
@@ -216,6 +265,7 @@ textarea {
   /* text-transform: full-width; */
 }
 
+/* Pixel fonts */
 @font-face {
   font-family: 'M+12';
   src: url('fonts/JF-Dot-MPlus12.ttf');
@@ -251,6 +301,19 @@ textarea {
 }
 
 @font-face {
+  font-family: 'Ark Pixel';
+  src: url('fonts/ark-pixel-12px-monospaced-ja.woff2') format('woff2');
+}
+.ark-pixel {
+  font-family: 'Ark Pixel';
+  /* This should be a multiple of 12px */
+  font-size: 20px;
+  line-height: calc(var(--cell-height) * 1);
+  /* text-transform: full-width; */
+}
+/* End Pixel fonts */
+
+@font-face {
   font-family: 'Inconsolata';
   src: url('fonts/Inconsolata-VariableFont_wdth\,wght.ttf') format('truetype');
   font-weight: 100 900;
@@ -260,10 +323,23 @@ textarea {
 .inconsolata {
   font-family: 'Inconsolata';
   font-size: var(--cell-height);
-  line-height: calc(var(--cell-height) * 1.2);
+  line-height: calc(var(--cell-height) * 1.1);
   /* text-transform: full-width; */
   font-stretch: extra-expanded;
   font-weight: 400;
+}
+
+@font-face {
+  font-family: 'M PLUS Code Latin Expanded';
+  src: url('fonts/MPLUSCodeLatin_Expanded-Regular.ttf') format('truetype');
+}
+.mplus-code {
+  font-size: calc(var(--cell-height) * 1.1);
+  line-height: calc(var(--cell-height) * 1);
+}
+@font-face {
+  font-family: ;
+  src: url('fonts/MPLUSRounded1c-Regular.ttf');
 }
 
 @font-face {
@@ -273,10 +349,95 @@ textarea {
 @font-face {
   font-family: 'Yuji Syuku';
   src: url('fonts/YujiSyuku-Regular.ttf') format('truetype');
+  unicode-range: U+4E00-9FFF; /* CJK Unified Ideographs */
+}
+._brush {
+  font-family: 'TamboScript', 'Yuji Syuku';
+  font-size: calc(var(--cell-height) * 1);
+  line-height: calc(var(--cell-height) * 1.2);
+  /* text-transform: full-width; */
 }
 .brush {
-  font-family: 'TamboScript', 'Yuji Syuku';
+  font-family: 'Monaspace Radon Wide Regular', 'Yuji Syuku';
+
+  font-size: calc(var(--cell-height) * 1);
+  line-height: calc(var(--cell-height) * 1.1);
+  /* text-transform: full-width; */
+  /* For Recursive VF */
+  font-variation-settings: 'MONO' 1, 'CASL' 1, 'slnt' -5, 'CRSV' 1;
+  font-feature-settings: 'calt';
+}
+
+@font-face {
+  font-family: 'League Mono Extended';
+  src: url('fonts/LeagueMono-ExtendedLight.woff2');
+}
+
+@font-face {
+  font-family: 'Recursive';
+  src: url('fonts/Recursive_VF_1.085.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Monaspace Radon Wide Regular';
+  src: url('fonts/MonaspaceRadon-WideRegular.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Monaspace Radon Wide Light';
+  src: url('fonts/MonaspaceRadon-WideLight.woff2') format('woff2');
+}
+.monaspace-radon {
+  font-family: 'Monaspace Radon Wide Light';
   font-size: var(--cell-height);
+  line-height: calc(var(--cell-height) * 1.2);
+  /* text-transform: full-width; */
+}
+
+@font-face {
+  font-family: 'Monaspace Xenon Wide Regular';
+  src: url('fonts/MonaspaceXenon-WideRegular.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Monaspace Xenon Wide Light';
+  src: url('fonts/MonaspaceXenon-WideLight.woff2') format('woff2');
+}
+.monaspace-xenon {
+  font-family: 'Monaspace Xenon Wide Light';
+  font-size: var(--cell-height);
+  line-height: calc(var(--cell-height) * 1.2);
+  /* text-transform: full-width; */
+}
+
+@font-face {
+  font-family: 'Sometype Mono Regular';
+  src: url('fonts/SometypeMono-Regular.ttf');
+}
+.sometype {
+  font-family: 'Sometype Mono Regular';
+  font-size: var(--cell-height);
+  font-weight: 700;
+  line-height: calc(var(--cell-height) * 1.2);
+  /* text-transform: full-width; */
+}
+
+@font-face {
+  font-family: 'Azeret Mono Regular';
+  src: url('fonts/AzeretMono-Regular.ttf');
+}
+.azaret {
+  font-family: 'Azeret Mono Regular';
+  font-size: var(--cell-height);
+  line-height: calc(var(--cell-height) * 1.2);
+  /* text-transform: full-width; */
+}
+
+@font-face {
+  font-family: 'Iosevka Sans Regular Widest';
+  src: url('fonts/IosevkaWidest-Regular.woff2') format('woff2');
+}
+.iosevka-sans {
+  font-family: 'Iosevka Sans Regular Widest';
+  font-size: calc(var(--cell-height) * 1.2);
   line-height: calc(var(--cell-height) * 1.2);
   /* text-transform: full-width; */
 }

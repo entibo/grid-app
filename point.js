@@ -29,3 +29,27 @@ export function lerp(a, b, t) {
 export function round(point) {
   return { x: Math.round(point.x), y: Math.round(point.y) }
 }
+
+//
+
+export function nextPosition({ x, y }, horizontal) {
+  if (typeof horizontal !== 'boolean')
+    throw new Error('horizontal must be a boolean')
+  return horizontal ? { x: x + 1, y } : { x, y: y + 1 }
+}
+export function previousPosition({ x, y }, horizontal) {
+  if (typeof horizontal !== 'boolean')
+    throw new Error('horizontal must be a boolean')
+  return horizontal ? { x: x - 1, y } : { x, y: y - 1 }
+}
+
+export function nextLine({ x, y }, horizontal) {
+  if (typeof horizontal !== 'boolean')
+    throw new Error('horizontal must be a boolean')
+  return horizontal ? { x, y: y + 1 } : { x: x - 1, y: y }
+}
+export function previousLine({ x, y }, horizontal) {
+  if (typeof horizontal !== 'boolean')
+    throw new Error('horizontal must be a boolean')
+  return horizontal ? { x, y: y - 1 } : { x: x + 1, y: y }
+}

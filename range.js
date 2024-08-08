@@ -169,3 +169,11 @@ export function whichCornerIs(range, point) {
     }
   }
 }
+
+export function contentStart(range, horizontal) {
+  return horizontal ? topLeft(range) : topRight(range)
+}
+
+export function contentEnd(range, horizontal) {
+  return horizontal ? bottomRight(range) : bottomLeft(range)
+}
