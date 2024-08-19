@@ -1,14 +1,208 @@
+@font-face {
+  font-family: 'Right Serif Mono';
+  src: url('fonts/PPRightSerifMono-Regular.otf') format('opentype');
+}
+@font-face {
+  font-family: 'Panoptica';
+  src: url('fonts/Panoptica\ Regular.ttf');
+}
+@font-face {
+  font-family: 'League Mono';
+  src: url('fonts/LeagueMono-ExtendedLight.woff2');
+}
+@font-face {
+  font-family: 'Inconsolata';
+  src: url('fonts/Inconsolata-ExtraExpanded.ttf');
+}
+@font-face {
+  font-family: 'Iosevka';
+  src: url('fonts/IosevkaWidest-Regular.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Source Code Pro';
+  src: url('fonts/SourceCodePro-Regular.ttf.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Fantasque Sans Mono';
+  src: url('fonts/FantasqueSansMono-Regular.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Cousine';
+  src: url('fonts/Cousine-Regular.ttf');
+}
+@font-face {
+  font-family: 'Luxi Mono';
+  src: url('fonts/luximr.ttf');
+}
+@font-face {
+  font-family: 'Monaspace Radon';
+  src: url('fonts/MonaspaceRadon-WideLight.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'PT Mono';
+  src: url('fonts/PTMono-Regular.ttf');
+}
+@font-face {
+  font-family: 'Libertinus Mono';
+  src: url('fonts/LibertinusMono-Regular.woff2');
+}
+/*  */
+
 .sans {
-  font-family: 'Inconsolata', sans-serif;
+  font-family: 'Inconsolata', 'Noto Sans', 'Noto Sans VF', 'Source Han Sans',
+    'Source Han Sans VF', sans-serif;
+  line-height: 1.1em;
+}
+
+.serif {
+  font-family: 'Libertinus Mono', 'Noto Serif', 'Noto Serif VF',
+    'Source Han Serif', 'Source Han Serif VF', 'Noto Serif (hosted)', serif;
+  line-height: 1.1em;
+}
+@font-face {
+  font-family: 'Noto Serif (hosted)';
+  src: url('fonts/NotoSerifCJKjp-Regular.woff2') format('woff2');
+  font-display: block;
 }
 
 .pop {
   font-family: 'Hachi Maru Pop';
-  font-size: 1em;
   line-height: 0.8em;
 }
-
 @font-face {
   font-family: 'Hachi Maru Pop';
   src: local('Hachi Maru Pop'), url('fonts/HachiMaruPop-Regular.ttf');
+  font-display: block;
+}
+
+.plus {
+  font-family: 'M PLUS Code Latin', 'M PLUS Rounded 1c';
+  line-height: 1em;
+}
+@font-face {
+  font-family: 'M PLUS Code Latin';
+  src: url('fonts/MPLUSCodeLatin_Expanded-Regular.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'M PLUS Rounded 1c';
+  src: url('fonts/MPLUSRounded1c-Regular.ttf');
+}
+
+.brush {
+  --cjk-font: 'Yuji Syuku';
+  font-family: 'Recursive', var(--cjk-font);
+  line-height: 1em;
+  /* For Recursive VF - slant from 0 to -15 */
+  font-variation-settings: 'MONO' 1, 'CASL' 1, 'slnt' -2, 'CRSV' 1;
+  /* I forgot why this is here but leaving it just in case */
+  font-feature-settings: 'calt';
+}
+.brush:lang(ja),
+.brush:lang(ko) {
+  --cjk-font: 'Yuji Syuku', 'Ma Shan Zheng';
+}
+.brush:lang(zh) {
+  --cjk-font: 'Ma Shan Zheng', 'Yuji Syuku';
+}
+@font-face {
+  font-family: 'Yuji Syuku';
+  src: url('fonts/YujiSyuku-Regular.ttf') format('truetype');
+  /* unicode-range: U+4E00-9FFF; CJK Unified Ideographs */
+}
+@font-face {
+  font-family: 'Ma Shan Zheng';
+  src: url('fonts/MaShanZheng-Regular.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Monaspace Radon';
+  /* Light/Regular */
+  src: url('fonts/MonaspaceRadon-WideLight.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Monaspace Xenon';
+  /* Light/Regular */
+  src: url('fonts/MonaspaceXenon-WideLight.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Recursive';
+  src: url('fonts/Recursive_VF_1.085.woff2') format('woff2');
+}
+
+.pen {
+  --seto-jp-font: 'Ebihara No Kuseji';
+  --cjk-font: '';
+  /* TODO: pull latin from xiaolai only: it has full width style */
+  font-family: '', var(--cjk-font);
+  line-height: 1em;
+}
+.pen:lang(ja),
+.pen:lang(ko) {
+  --cjk-font: var(--seto-jp-font), 'Xiaolai';
+}
+.pen:lang(zh) {
+  --cjk-font: 'Xiaolai', var(--seto-jp-font);
+}
+@font-face {
+  font-family: 'Seto';
+  src: url('fonts/Kosefont-JP.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Xiaolai';
+  src: url('fonts/XiaolaiSC-Regular.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Ebihara No Kuseji';
+  src: url('fonts/EbiharaNoKuseji.ttf');
+}
+
+.round {
+  --cjk-font: '';
+  font-family: 'Comfortaa', var(--cjk-font), DEBUG;
+  font-weight: 350;
+  line-height: 1.1em;
+}
+.round:lang(ja),
+.round:lang(ko) {
+  --cjk-font: 'Zen Maru Gothic', 'HanWangYen';
+}
+.round:lang(zh) {
+  --cjk-font: 'HanWangYen', 'Zen Maru Gothic';
+}
+@font-face {
+  font-family: 'Comfortaa';
+  src: url('fonts/Comfortaa-VariableFont_wght.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Zen Maru Gothic';
+  src: url('fonts/ZenMaruGothic-Regular.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Huninn';
+  src: url('fonts/jf-openhuninn-2.0.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Kiwi Maru';
+  src: url('fonts/KiwiMaru-Light.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'HanWangYen';
+  src: url('fonts/HanWangYen-Light.ttf');
+}
+
+.square {
+  --cjk-font: 'Flop Design';
+  font-family: 'League Mono', var(--cjk-font);
+  line-height: 1.2em;
+}
+@font-face {
+  font-family: 'Flop Design';
+  src: url('fonts/FlopDesignFONT.otf');
+}
+
+/*  */
+
+@font-face {
+  font-family: 'DEBUG';
+  src: url('fonts/LastResort-Regular.ttf') format('truetype');
 }

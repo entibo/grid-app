@@ -1,0 +1,85 @@
+Halfwidth and Fullwidth Forms (U+FF00 - U+FFEF)
+(omitted) a-zA-Z0-9
+Halfwidth and Fullwidth Forms (U+FF00 - U+FFEF)
+！︕
+＂
+＃
+＄
+％
+＆
+＇
+（︵
+）︶
+＊
+＋
+，︐
+－
+．
+／
+：︓
+；︔
+＜
+＝
+＞
+？︖
+＠
+［﹇
+＼
+］﹈
+＾
+＿
+｀
+｛︷
+｜
+｝︸
+～
+｟
+｠
+｡︒
+｢
+｣
+､︑
+･
+￠
+￡
+￢
+￣
+￤
+￥
+￦
+Vertical Forms (U+FE10 - U+FE1F)
+CJK Compatibility Forms (U+FE30 - U+FE4F)
+CJK Symbols and Punctuation (U+3000 - U+303F)
+　
+、
+。
+〃
+〄
+々
+〆
+〇
+〈︿
+〉﹀
+《︽
+》︾
+「﹁
+」﹂
+『﹃
+』﹄
+【︻
+】︼
+〒
+〓
+〔︹
+〕︺
+〖︗
+〗︘
+〘
+〙
+〚
+〛
+〜
+General Punctuation (U+2000 - U+206F)
+…︙
+‥︰
+—︱

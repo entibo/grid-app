@@ -27,6 +27,7 @@ export function stop() {
   velocity = { x: 0, y: 0 }
 }
 
+// Update loop
 {
   let previousTime = document.timeline.currentTime
   requestAnimationFrame(update)

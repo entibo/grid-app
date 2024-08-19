@@ -4,6 +4,7 @@
   --grid-bg-color: #f0f0f0;
   --grid-lines-color: rgb(218, 210, 208);
   --grid-cursor-thickness: 2px;
+  --text-color: black;
 }
 
 * {
@@ -18,6 +19,7 @@ body {
 
   font-family: Inconsolata, monospace;
   font-size: var(--cell-height);
+  color: var(--text-color);
 }
 
 /* Invisible element used for capturing keyboard input */
@@ -46,10 +48,10 @@ textarea {
   /* cursor: none; */
 }
 .grid.horizontal {
-  cursor: text;
+  /* cursor: text; */
 }
 .grid.vertical {
-  cursor: vertical-text;
+  /* cursor: vertical-text; */
 }
 
 .gridBackground {
@@ -89,7 +91,20 @@ textarea {
   background: var(--grid-lines-color);
 }
 
+.diamond {
+  position: absolute;
+  pointer-events: none;
+  width: calc(0.707 * var(--cell-width));
+  height: calc(0.707 * var(--cell-height));
+  transform: rotate(45deg);
+  margin-left: calc(-0.35 * var(--cell-width));
+  margin-top: calc(-0.35 * var(--cell-height));
+  background: var(--grid-lines-color)
+  /* outline: 1px solid  var(--text-color); */
+}
+
 .cursor {
+  display: none;
   position: absolute;
   width: calc(var(--cell-width) + var(--grid-cursor-thickness));
   height: calc(var(--cell-height) + var(--grid-cursor-thickness));
@@ -222,16 +237,6 @@ textarea {
 }
 
 @font-face {
-  font-family: 'Square';
-  src: url('fonts/square.ttf') format('truetype');
-}
-.square {
-  font-family: 'Square';
-  font-size: var(--cell-height);
-  /* line-height: calc(var(--cell-height) * 1.1); */
-}
-
-@font-face {
   font-family: 'Courier Prime';
   src: url('fonts/CourierPrime-Regular.ttf') format('truetype');
 }
@@ -239,18 +244,6 @@ textarea {
   font-family: 'Courier Prime';
   font-size: calc(var(--cell-height) * 1);
   line-height: calc(var(--cell-height) * 1.3);
-}
-
-@font-face {
-  font-family: 'Zen Maru Gothic';
-  src: url('fonts/ZenMaruGothic-Regular.ttf') format('truetype');
-}
-.zen-maru-gothic {
-  /* TOOD: Comfortaa */
-  font-family: 'Comfortaa', 'Zen Maru Gothic';
-  font-size: var(--cell-height);
-  line-height: calc(var(--cell-height) * 1.2);
-  /* text-transform: full-width; */
 }
 
 /* 8x8 */
@@ -314,101 +307,6 @@ textarea {
 /* End Pixel fonts */
 
 @font-face {
-  font-family: 'Inconsolata';
-  src: url('fonts/Inconsolata-VariableFont_wdth\,wght.ttf') format('truetype');
-  font-weight: 100 900;
-  font-stretch: 50% 200%;
-  font-style: normal;
-}
-.inconsolata {
-  font-family: 'Inconsolata';
-  font-size: var(--cell-height);
-  line-height: calc(var(--cell-height) * 1.1);
-  /* text-transform: full-width; */
-  font-stretch: extra-expanded;
-  font-weight: 400;
-}
-
-@font-face {
-  font-family: 'M PLUS Code Latin Expanded';
-  src: url('fonts/MPLUSCodeLatin_Expanded-Regular.ttf') format('truetype');
-}
-.mplus-code {
-  font-size: calc(var(--cell-height) * 1.1);
-  line-height: calc(var(--cell-height) * 1);
-}
-@font-face {
-  font-family: ;
-  src: url('fonts/MPLUSRounded1c-Regular.ttf');
-}
-
-@font-face {
-  font-family: 'TamboScript';
-  src: url('fonts/TamboScript-p3pv.ttf');
-}
-@font-face {
-  font-family: 'Yuji Syuku';
-  src: url('fonts/YujiSyuku-Regular.ttf') format('truetype');
-  unicode-range: U+4E00-9FFF; /* CJK Unified Ideographs */
-}
-._brush {
-  font-family: 'TamboScript', 'Yuji Syuku';
-  font-size: calc(var(--cell-height) * 1);
-  line-height: calc(var(--cell-height) * 1.2);
-  /* text-transform: full-width; */
-}
-.brush {
-  font-family: 'Monaspace Radon Wide Regular', 'Yuji Syuku';
-
-  font-size: calc(var(--cell-height) * 1);
-  line-height: calc(var(--cell-height) * 1.1);
-  /* text-transform: full-width; */
-  /* For Recursive VF */
-  font-variation-settings: 'MONO' 1, 'CASL' 1, 'slnt' -5, 'CRSV' 1;
-  font-feature-settings: 'calt';
-}
-
-@font-face {
-  font-family: 'League Mono Extended';
-  src: url('fonts/LeagueMono-ExtendedLight.woff2');
-}
-
-@font-face {
-  font-family: 'Recursive';
-  src: url('fonts/Recursive_VF_1.085.woff2') format('woff2');
-}
-
-@font-face {
-  font-family: 'Monaspace Radon Wide Regular';
-  src: url('fonts/MonaspaceRadon-WideRegular.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Monaspace Radon Wide Light';
-  src: url('fonts/MonaspaceRadon-WideLight.woff2') format('woff2');
-}
-.monaspace-radon {
-  font-family: 'Monaspace Radon Wide Light';
-  font-size: var(--cell-height);
-  line-height: calc(var(--cell-height) * 1.2);
-  /* text-transform: full-width; */
-}
-
-@font-face {
-  font-family: 'Monaspace Xenon Wide Regular';
-  src: url('fonts/MonaspaceXenon-WideRegular.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Monaspace Xenon Wide Light';
-  src: url('fonts/MonaspaceXenon-WideLight.woff2') format('woff2');
-}
-.monaspace-xenon {
-  font-family: 'Monaspace Xenon Wide Light';
-  font-size: var(--cell-height);
-  line-height: calc(var(--cell-height) * 1.2);
-  /* text-transform: full-width; */
-}
-
-@font-face {
   font-family: 'Sometype Mono Regular';
   src: url('fonts/SometypeMono-Regular.ttf');
 }
@@ -427,17 +325,6 @@ textarea {
 .azaret {
   font-family: 'Azeret Mono Regular';
   font-size: var(--cell-height);
-  line-height: calc(var(--cell-height) * 1.2);
-  /* text-transform: full-width; */
-}
-
-@font-face {
-  font-family: 'Iosevka Sans Regular Widest';
-  src: url('fonts/IosevkaWidest-Regular.woff2') format('woff2');
-}
-.iosevka-sans {
-  font-family: 'Iosevka Sans Regular Widest';
-  font-size: calc(var(--cell-height) * 1.2);
   line-height: calc(var(--cell-height) * 1.2);
   /* text-transform: full-width; */
 }

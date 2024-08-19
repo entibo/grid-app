@@ -44,21 +44,6 @@ effect(() => updateContentRange(Grid.$cellMap.value))
 //
 
 export const $horizontal = signal(true)
-let lastSelectionRange = $selectionRange.value
-effect(() => {
-  const selectionRange = $selectionRange.value
-  if (lastSelectionRange.width === 0 && lastSelectionRange.height === 0) {
-    if (selectionRange.width > 0 && selectionRange.height === 0) {
-      $horizontal.value = true
-    }
-    if (selectionRange.width === 0 && selectionRange.height > 0) {
-      $horizontal.value = false
-    }
-  }
-  lastSelectionRange = selectionRange
-})
-effect(() => console.log($horizontal.value))
-
 //
 
 export const $paragraphRange = computed(() => {

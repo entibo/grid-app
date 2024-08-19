@@ -11,15 +11,6 @@ import { signal, computed, effect } from '@preact/signals-core'
 import * as Pan from './pan.js'
 import * as Config from './config.js'
 
-addEventListener('mousemove', (e) => {
-  const rect = originElement.getBoundingClientRect()
-  const x = (((e.clientX - rect.left) / cellSize) % 1) - 0.5
-  const y = (((e.clientY - rect.top) / cellSize) % 1) - 0.5
-  const isHorizontal = Math.abs(x) > Math.abs(y)
-  gridElement.classList.toggle('horizontal', isHorizontal)
-  gridElement.classList.toggle('vertical', !isHorizontal)
-})
-
 function screenToCursor(screen) {
   const rect = originElement.getBoundingClientRect()
   const x = (screen.x - rect.left) / cellSize
@@ -61,10 +52,13 @@ document.documentElement.style.setProperty('--cell-height', `${cellSize}px`)
 
 export const gridElement = document.createElement('div')
 gridElement.className = 'grid'
-effect(() => {
-  const horizontal = Selection.$horizontal.value
-  gridElement.classList.toggle('horizontal', horizontal)
-  gridElement.classList.toggle('vertical', !horizontal)
+gridElement.addEventListener('mousemove', (e) => {
+  const rect = originElement.getBoundingClientRect()
+  const x = (((e.clientX - rect.left) / cellSize) % 1) - 0.5
+  const y = (((e.clientY - rect.top) / cellSize) % 1) - 0.5
+  const isHorizontal = Math.abs(x) > Math.abs(y)
+  gridElement.classList.toggle('horizontal', isHorizontal)
+  gridElement.classList.toggle('vertical', !isHorizontal)
 })
 document.body.appendChild(gridElement)
 
@@ -119,6 +113,60 @@ gridElement.appendChild(scrollBoxElement)
 const originElement = document.createElement('div')
 originElement.className = 'origin'
 scrollBoxElement.appendChild(originElement)
+
+//
+
+const diamondElement = document.createElement('div')
+diamondElement.className = 'diamond'
+originElement.appendChild(diamondElement)
+
+let lastDiamondPosition = { x: 0, y: 0 }
+addEventListener('mousemove', (e) => {
+  const rect = originElement.getBoundingClientRect()
+  const position = {
+    x: (e.clientX - rect.left) / cellSize,
+    y: (e.clientY - rect.top) / cellSize,
+  }
+  const dx = (position.x % 1) - 0.5
+  const dy = (position.y % 1) - 0.5
+
+  const isHorizontal = Math.abs(dx) > Math.abs(dy)
+
+  console.log(position, dx, dy)
+
+  const diamondPosition = isHorizontal
+    ? {
+        x: Math.round(position.x),
+        y: Math.floor(position.y) + 0.5,
+      }
+    : {
+        x: Math.floor(position.x) + 0.5,
+        y: Math.round(position.y),
+      }
+
+  if (
+    diamondPosition.x !== lastDiamondPosition.x ||
+    diamondPosition.y !== lastDiamondPosition.y
+  ) {
+    setGridPosition(diamondElement, diamondPosition)
+    let m = 1.0
+    diamondElement.animate(
+      [
+        { scale: isHorizontal ? '0 1' : '1 0' },
+        { scale: isHorizontal ? `${m} 1` : `1 ${m}` },
+      ],
+      {
+        duration: 140,
+        fill: 'forwards',
+        easing: 'cubic-bezier(0.6, 0, 0.8, 0)',
+      },
+    )
+  }
+
+  lastDiamondPosition = diamondPosition
+})
+
+//
 
 const cellsElement = document.createElement('div')
 cellsElement.className = 'cells'
@@ -253,11 +301,12 @@ menuElement.appendChild(languageElement)
 
 effect(() => {
   const language = Config.$language.value
+  const languageDetails = Config.languages[language]
   for (const l of Object.keys(Config.languages)) {
     document.body.classList.toggle(l, l === language)
   }
-  languageDisplayElement.textContent =
-    Config.languages[language].displayCharacter
+  document.body.setAttribute('lang', languageDetails.lang)
+  languageDisplayElement.textContent = languageDetails.displayCharacter
 })
 
 //
@@ -364,6 +413,9 @@ scrollBoxElement.addEventListener('scroll', (e) => {
 
 function setCellValue(el, value) {
   el.textContent = value
+  // if(value.charCodeAt(0) < 1000) el.style.fontSize = '1.5em'
+  // if (value.charCodeAt(0) < 1000) el.style.fontSize = '1.5em'
+  // else el.style.fontSize = '1em'
   // el.classList.toggle('wide', isFullWidth(value))
 }
 
