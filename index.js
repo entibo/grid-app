@@ -226,13 +226,6 @@ export function moveCursorAndDisplace(offset) {
   checkpoint()
 }
 
-function moveSelectionBy(offset) {
-  const { start, end } = Selection.$selection.value
-  Selection.$selection.value = {
-    start: Point.add(start, offset),
-    end: Point.add(end, offset),
-  }
-}
 
 export function spacebar() {
   const rawCursorPosition = Selection.$selection.value.end

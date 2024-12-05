@@ -1,10 +1,11 @@
 @import url('fonts.css');
 
 :root {
-  --grid-bg-color: #f0f0f0;
-  --grid-lines-color: rgb(218, 210, 208);
+  --grid-bg-color: hsl(30deg, 20%, 97%);
+  --grid-lines-color: hsl(30deg, 30%, 93%);
+  --diamond-color: hsl(30deg, 70%, 88%);
+  --text-color: hsl(30, 15%, 15%);
   --grid-cursor-thickness: 2px;
-  --text-color: black;
 }
 
 * {
@@ -46,6 +47,12 @@ textarea {
 
   background: var(--grid-bg-color);
   /* cursor: none; */
+  /* cursor: crosshair; */
+}
+.grid.diamond-cursor {
+  cursor: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAYAAACNiR0NAAABg2lDQ1BJQ0MgcHJvZmlsZQAAKJF9kT1Iw0AcxV9TxSKVDkYQcchQneyiIo61CkWoEGqFVh1MLv2CJi1Jiouj4Fpw8GOx6uDirKuDqyAIfoA4OzgpukiJ/0sKLWI8OO7Hu3uPu3eA0Kww3eqJA7phm+lkQsrmVqW+V4QgIowhRBRm1eZkOQXf8XWPAF/vYjzL/9yfY0DLWwwISMRxVjNt4g3imU27xnmfWGQlRSM+J54w6YLEj1xXPX7jXHRZ4JmimUnPE4vEUrGL1S5mJVMnniaOarpB+ULWY43zFme9Umfte/IXhvPGyjLXaY4iiUUsQYYEFXWUUYGNGK0GKRbStJ/w8Y+4fplcKrnKYORYQBU6FNcP/ge/u7UKU5NeUjgB9L44zscY0LcLtBqO833sOK0TIPgMXBkdf7UJzH6S3uho0SMgsg1cXHc0dQ+43AGGn2qKqbhSkKZQKADvZ/RNOWDwFuhf83pr7+P0AchQV6kb4OAQGC9S9rrPu0Pdvf17pt3fD1vZcp3MO1M6AAAABmJLR0QA2QDvAPv1dxpeAAAACXBIWXMAAC4jAAAuIwF4pT92AAAAB3RJTUUH6AgUDBcbXzQMWAAAABl0RVh0Q29tbWVudABDcmVhdGVkIHdpdGggR0lNUFeBDhcAAAEtSURBVDjLrdU7SgQxAMbxf2Z1V+JewG6OYOGAiNj5AsHVZitx0cZOEDyChYXYCVYiglioazerHiGXyB0Wo6KFTUaGdZLJzviVefzIO4KSGK0kkAJNYEXGydDXPirBmsADsATMAwOjVbsSaLSatNharngBSI1W02OBRqsGcANsFFQvAn2j1VQQaLQSwCXQ9cxsGXgyWrW8oMUugH3Kswrc2aVxjvAUOCA8HYtO/AGNVifAMeNnG7jNUGGxI+CMerkG9hpGq0PgnPqZBWYiYI7/SzsCevbM1c09sCtyB/kK2KmIPQJdGSffYuR2VEH7Fvv63eUaaApsyTj5zAqE4x6HoAOgk8cKwUD02WIfoxXC83y50Bdgswjzgg701WLvrj4i4AvI0BhYl3Hy5mv/A5qcbqzLFG1zAAAAAElFTkSuQmCC)
+      10 10,
+    auto;
 }
 .grid.horizontal {
   /* cursor: text; */
@@ -99,7 +106,7 @@ textarea {
   transform: rotate(45deg);
   margin-left: calc(-0.35 * var(--cell-width));
   margin-top: calc(-0.35 * var(--cell-height));
-  background: var(--grid-lines-color)
+  background: var(--diamond-color);
   /* outline: 1px solid  var(--text-color); */
 }
 

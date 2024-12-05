@@ -121,7 +121,12 @@ diamondElement.className = 'diamond'
 originElement.appendChild(diamondElement)
 
 let lastDiamondPosition = { x: 0, y: 0 }
+let diamondAnimation
 addEventListener('mousemove', (e) => {
+  if (diamondAnimation) {
+    // diamondAnimation.cancel()
+    // diamondAnimation = null
+  }
   const rect = originElement.getBoundingClientRect()
   const position = {
     x: (e.clientX - rect.left) / cellSize,
@@ -150,17 +155,20 @@ addEventListener('mousemove', (e) => {
   ) {
     setGridPosition(diamondElement, diamondPosition)
     let m = 1.0
-    diamondElement.animate(
+    diamondAnimation = diamondElement.animate(
       [
         { scale: isHorizontal ? '0 1' : '1 0' },
         { scale: isHorizontal ? `${m} 1` : `1 ${m}` },
       ],
       {
-        duration: 140,
+        duration: 240,
         fill: 'forwards',
         easing: 'cubic-bezier(0.6, 0, 0.8, 0)',
       },
     )
+    diamondAnimation.addEventListener('finish', () => {
+      // gridElement.classList.remove('diamond-cursor')
+    })
   }
 
   lastDiamondPosition = diamondPosition

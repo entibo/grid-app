@@ -5,16 +5,35 @@ import * as Range from './range.js'
 //
 
 export const $selection = signal({
+  direction: { x: 1, y: 0 },
   start: { x: 0, y: 0 },
   end: { x: 0, y: 0 },
 })
 
-export function select(start, end = start) {
-  $selection.value = { start, end }
+export const isHorizontal = ({ x, y }) => x
+export const isVertical = ({ x, y }) => y
+export function setDirection(direction) {
+  $selection.value = { ...$selection.value, direction }
+}
+
+export function select(
+  start,
+  end = start,
+  direction = $selection.value.direction,
+) {
+  $selection.value = { direction, start, end }
 }
 export function selectTo(end) {
-  const { start } = $selection.value
-  $selection.value = { start, end }
+  const { direction, start } = $selection.value
+  $selection.value = { direction, start, end }
+}
+export function moveSelectionBy(offset) {
+  const { direction, start, end } = $selection.value
+  $selection.value = {
+    direction,
+    start: Point.add(start, offset),
+    end: Point.add(end, offset),
+  }
 }
 export function clearSelection() {
   const { end } = $selection.value
@@ -43,7 +62,6 @@ effect(() => updateContentRange(Grid.$cellMap.value))
 
 //
 
-export const $horizontal = signal(true)
 //
 
 export const $paragraphRange = computed(() => {
